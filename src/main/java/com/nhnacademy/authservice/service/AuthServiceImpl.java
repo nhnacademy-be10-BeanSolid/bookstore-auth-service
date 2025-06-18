@@ -1,5 +1,8 @@
 package com.nhnacademy.authservice.service;
 
+import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.exception.InvalidTokenException;
+import com.nhnacademy.authservice.provider.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     public UserDetails authentication(String username, String password) {
@@ -24,5 +28,26 @@ public class AuthServiceImpl implements AuthService {
 
         // 3. 인증 성공 시 UserDetails 반환
         return (UserDetails) authentication.getPrincipal();
+    }
+
+    @Override
+    public RefreshTokenResponseDto refreshToken(String refreshToken) {
+        // 1. RefreshToken 유효성 검증
+        if(!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new InvalidTokenException("Invalid Refresh Token");
+        }
+
+        // 2. RefreshToken 사용자 정보 추출
+        String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
+
+        // 3. 사용자 정보로 UserDetails 조회
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        // 4. 새 AccessToken 및 RefreshToken 발급
+        String newAccessToken = jwtTokenProvider.generateToken(userDetails);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        // 5. 응답 반환
+        return new RefreshTokenResponseDto(newAccessToken, newRefreshToken);
     }
 }

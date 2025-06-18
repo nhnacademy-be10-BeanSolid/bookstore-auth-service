@@ -106,4 +106,9 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
+    public String getUsernameFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return claims.getSubject();
+    }
 }
