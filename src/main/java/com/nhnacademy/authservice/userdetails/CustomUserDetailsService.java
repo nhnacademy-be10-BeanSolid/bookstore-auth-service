@@ -1,7 +1,7 @@
 package com.nhnacademy.authservice.userdetails;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
-import com.nhnacademy.bookstoreuserapi.domain.response.ResponseUser;
+import com.nhnacademy.authservice.domain.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -16,7 +16,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         // User-API에 사용자 조회
-        ResponseUser userResponse = userAdapter.getUserByUsername(username);
+        UserResponse userResponse = userAdapter.getUserByUsername(username);
         if(userResponse == null) {
             throw new UsernameNotFoundException(username + "을(를) 찾을 수 없습니다.");
         }

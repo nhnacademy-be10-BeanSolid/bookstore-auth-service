@@ -1,6 +1,5 @@
 package com.nhnacademy.authservice.service;
 
-import com.nhnacademy.authservice.domain.LoginResponseDto;
 import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
@@ -18,14 +17,6 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
-
-    @Override
-    public LoginResponseDto login(String id, String password) {
-        UserDetails userDetails = authentication(id, password);
-        String accessToken = jwtTokenProvider.generateToken(userDetails);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
-        return new LoginResponseDto(accessToken, refreshToken);
-    }
 
     @Override
     public UserDetails authentication(String username, String password) {
