@@ -5,17 +5,11 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Collectors;
 
@@ -59,26 +53,6 @@ public class JwtTokenProvider {
                 .expiration(expiry)
                 .signWith(key, Jwts.SIG.HS256)
                 .compact();
-    }
-
-    // 토큰에서 인증 정보 추출
-    public Authentication getAuthentication(String token) {
-        Claims claims = parseClaims(token);
-
-        String auth = claims.get("auth", String.class);
-        if(auth == null) {
-            throw new RuntimeException("권한 정보가 없는 토큰입니다.");
-        }
-
-        Collection<? extends GrantedAuthority> authorities =
-                Arrays.stream(auth.split(","))
-                        .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
-
-        UserDetails principal = new User(
-                claims.getSubject(), "", authorities);
-
-        return new UsernamePasswordAuthenticationToken(principal, token, authorities);
     }
 
     // 토큰 유효성 검증

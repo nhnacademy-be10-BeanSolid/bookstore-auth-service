@@ -1,6 +1,6 @@
 package com.nhnacademy.authservice.userdetails;
 
-import com.nhnacademy.authservice.domain.UserResponse;
+import com.nhnacademy.bookstoreuserapi.domain.response.ResponseUser;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,9 +9,9 @@ import java.util.Collection;
 import java.util.Collections;
 
 public class CustomUserDetails implements UserDetails {
-    private final UserResponse user;
+    private final ResponseUser user;
 
-    public CustomUserDetails(UserResponse user) {
+    public CustomUserDetails(ResponseUser user) {
         this.user = user;
     }
 
