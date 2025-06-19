@@ -3,6 +3,7 @@ package com.nhnacademy.authservice.controller;
 import com.nhnacademy.authservice.domain.LoginRequestDto;
 import com.nhnacademy.authservice.domain.RefreshTokenRequestDto;
 import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.domain.TokenParseResponseDto;
 import com.nhnacademy.authservice.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,4 +29,13 @@ public class AuthController {
         return ResponseEntity.ok(authService.refreshToken(request.refreshToken()));
     }
 
+    @PostMapping("/validate")
+    public ResponseEntity<Boolean> validateToken(@RequestBody String token) {
+        return ResponseEntity.ok(authService.validateToken(token));
+    }
+
+    @PostMapping("/parse")
+    public ResponseEntity<TokenParseResponseDto> parseToken(@RequestBody String token) {
+        return ResponseEntity.ok(authService.parseToken(token));
+    }
 }

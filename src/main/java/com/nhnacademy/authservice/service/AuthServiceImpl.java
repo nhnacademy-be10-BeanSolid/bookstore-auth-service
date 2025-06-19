@@ -2,15 +2,20 @@ package com.nhnacademy.authservice.service;
 
 import com.nhnacademy.authservice.domain.LoginResponseDto;
 import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.domain.TokenParseResponseDto;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+
+import java.util.Collection;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -59,5 +64,23 @@ public class AuthServiceImpl implements AuthService {
 
         // 5. 응답 반환
         return new RefreshTokenResponseDto(newAccessToken, newRefreshToken);
+    }
+
+    @Override
+    public boolean validateToken(String token) {
+        return jwtTokenProvider.validateToken(token);
+    }
+
+    @Override
+    public TokenParseResponseDto parseToken(String token) {
+        String username = jwtTokenProvider.getUsernameFromToken(token);
+
+        Authentication authentication = jwtTokenProvider.getAuthentication(token);
+        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+        List<String> authorityList = authorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return new TokenParseResponseDto(username, authorityList);
     }
 }
