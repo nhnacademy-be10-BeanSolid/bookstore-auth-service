@@ -1,7 +1,6 @@
 package com.nhnacademy.authservice.controller;
 
 import com.nhnacademy.authservice.domain.LoginRequestDto;
-import com.nhnacademy.authservice.domain.RefreshTokenRequestDto;
 import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.domain.TokenParseResponseDto;
 import com.nhnacademy.authservice.service.AuthService;
@@ -25,8 +24,8 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponseDto> refreshToken(@RequestBody RefreshTokenRequestDto request) {
-        return ResponseEntity.ok(authService.refreshToken(request.refreshToken()));
+    public ResponseEntity<RefreshTokenResponseDto> refreshToken(@RequestBody String request) {
+        return ResponseEntity.ok(authService.refreshToken(request));
     }
 
     @PostMapping("/validate")
