@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nhnacademy.authservice.domain.LoginRequestDto;
 import com.nhnacademy.authservice.domain.LoginResponseDto;
 import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.domain.TokenParseResponseDto;
 import com.nhnacademy.authservice.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -69,6 +72,38 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("new-access-token"))
                 .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"));
+    }
+
+    @Test
+    @DisplayName("토큰 유효성 검증 성공")
+    void validateToken_success() throws Exception {
+        // given
+        when(authService.validateToken(anyString())).thenReturn(true);
+
+        // when & then
+        mockMvc.perform(post("/auth/validate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString("test-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(true));
+    }
+
+    @Test
+    @DisplayName("토큰 파싱 성공")
+    void parseToken_success() throws Exception {
+        // given
+        List<String> authorities = List.of("ROLE_USER", "ROLE_ADMIN");
+        TokenParseResponseDto parseResponse = new TokenParseResponseDto("testuser", authorities);
+        when(authService.parseToken(anyString())).thenReturn(parseResponse);
+
+        // when & then
+        mockMvc.perform(post("/auth/parse")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString("test-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("testuser"))
+                .andExpect(jsonPath("$.authorities[0]").value("ROLE_USER"))
+                .andExpect(jsonPath("$.authorities[1]").value("ROLE_ADMIN"));
     }
 
 

@@ -9,12 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -35,13 +33,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserDetails authentication(String username, String password) {
-        // 1. 인증 토큰 생성
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username, password);
-
-        // 2. AuthenticationManager를 통해 인증 시도
-        Authentication authentication = authenticationManager.authenticate(authenticationToken);
-
-        // 3. 인증 성공 시 UserDetails 반환
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password));
         return (UserDetails) authentication.getPrincipal();
     }
 
@@ -73,14 +66,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public TokenParseResponseDto parseToken(String token) {
+        // 1. 반드시 유효성 검증
+        if (!jwtTokenProvider.validateToken(token)) {
+            throw new InvalidTokenException("Invalid Token");
+        }
         String username = jwtTokenProvider.getUsernameFromToken(token);
-
-        Authentication authentication = jwtTokenProvider.getAuthentication(token);
-        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-        List<String> authorityList = authorities.stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
-        return new TokenParseResponseDto(username, authorityList);
+        List<String> authorities = jwtTokenProvider.getAuthoritiesFromToken(token);
+        return new TokenParseResponseDto(username, authorities);
     }
 }

@@ -1,5 +1,6 @@
 package com.nhnacademy.authservice.provider;
 
+import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -60,5 +62,25 @@ class JwtTokenProviderTest {
     void testInvalidToken() {
         String invalidToken = "invalid.token.value";
         assertFalse(jwtTokenProvider.validateToken(invalidToken));
+    }
+
+    @Test
+    @DisplayName("parseClaims - 잘못된 토큰 예외 발생")
+    void testParseClaimsWithInvalidToken() {
+        String invalidToken = "invalid.token.value";
+        assertThrows(JwtException.class, () ->
+                jwtTokenProvider.parseClaims(invalidToken));
+    }
+
+    @Test
+    @DisplayName("토큰에서 권한 추출 - 권한 없음")
+    void testGetAuthoritiesFromTokenWithNoAuth() {
+        when(userDetails.getUsername()).thenReturn("testuser");
+        when(userDetails.getAuthorities()).thenReturn(Collections.emptyList());
+
+        String token = jwtTokenProvider.generateToken(userDetails);
+        List<?> authorities = jwtTokenProvider.getAuthoritiesFromToken(token);
+
+        assertTrue(authorities.size() == 1 || authorities.isEmpty());
     }
 }
