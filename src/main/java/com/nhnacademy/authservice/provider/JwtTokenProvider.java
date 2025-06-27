@@ -88,4 +88,22 @@ public class JwtTokenProvider {
         return Arrays.asList(auth.split(","));
     }
 
+    public String generateTemporaryToken(String provider, String idNo) {
+        // 임시 토큰 만료 시간: 10분
+        long tempTokenExpiration = 1000 * 60 * 10;
+
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + tempTokenExpiration);
+
+        return Jwts.builder()
+                .subject(provider + ":" + idNo)
+                .claim("provider", provider)
+                .claim("idNo", idNo)
+                .claim("type", "TEMP")
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(key, Jwts.SIG.HS256)
+                .compact();
+    }
+
 }
