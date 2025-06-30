@@ -1,9 +1,7 @@
 package com.nhnacademy.authservice.controller;
 
-import com.nhnacademy.authservice.domain.LoginRequestDto;
-import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
-import com.nhnacademy.authservice.domain.TokenParseResponseDto;
-import com.nhnacademy.authservice.service.AuthService;
+import com.nhnacademy.authservice.domain.*;
+import com.nhnacademy.authservice.service.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

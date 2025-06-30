@@ -5,6 +5,7 @@ import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.domain.TokenParseResponseDto;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
+import com.nhnacademy.authservice.service.auth.AuthServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

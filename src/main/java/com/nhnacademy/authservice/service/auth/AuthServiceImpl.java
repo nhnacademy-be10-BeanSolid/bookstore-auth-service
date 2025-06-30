@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.service;
+package com.nhnacademy.authservice.service.auth;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
 import com.nhnacademy.authservice.client.member.OAuth2MemberClient;
@@ -9,6 +9,7 @@ import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
 import com.nhnacademy.authservice.userdetails.CustomUserDetails;
+import com.nhnacademy.authservice.util.PhoneNumberUtils;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +20,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -85,7 +87,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public OAuth2LoginResponseDto oauth2Login(String provider, String code) {
+    public ResponseDto<?> oauth2Login(String provider, String code) {
         // 1. 토큰 발급
         OAuth2TokenClient tokenClient = tokenClientFactory.getClient(provider.toLowerCase());
         OAuth2TokenResponse tokenResponse = tokenClient.getToken(code);
@@ -93,6 +95,10 @@ public class AuthServiceImpl implements AuthService {
         // 2. accessToken 으로 사용자 정보 조회
         OAuth2MemberClient memberClient = memberClientFactory.getClient(provider.toLowerCase());
         OAuth2MemberResponse memberResponse = memberClient.getMember(tokenResponse.getAccess_token());
+
+        String formattedMobile = PhoneNumberUtils.formatPaycoPhoneNumber(
+                memberResponse.getData().getMember().getMobile()
+        );
 
         // 3. DB 에서 사용자 조회
         UserResponse userResponse = null;
@@ -106,23 +112,62 @@ public class AuthServiceImpl implements AuthService {
 
         // 4. 유저 정보가 없을 때: 임시 JWT 발급 & Redis에 OAuth2 유저 정보 저장
         if(userResponse == null) {
-            // (1) 임시 JWT 생성 (payload 에는 provider, idNO 등 최소 정보만 포함)
+
             String tempJwt = jwtTokenProvider.generateTemporaryToken(
                     provider.toUpperCase(),
                     memberResponse.getData().getMember().getIdNo()
             );
 
-            // (2) Redis 등 임시 저장소에 OAuth2 유저 정보 저장 (TTL: 10~30분)
-            redisService.saveOAuth2TempUser(tempJwt, memberResponse, 10 * 60);
-
-            // (3) 에외 발생 및 임시 토큰 반환
-            // 프론트엔드는 이 예외를 받아 회원가입 페이지로 리다이렉트, tempJwt를 쿼리스트링/헤더로 전달
-            throw new OAuth2AdditionalSignupRequiredException(tempJwt);
+            return ResponseDto.<AdditionalSignupRequiredDto>builder()
+                    .success(false)
+                    .message("추가 회원가입이 필요합니다.")
+                    .data(AdditionalSignupRequiredDto.builder()
+                            .tempJwt(tempJwt)
+                            .name(memberResponse.getData().getMember().getName())
+                            .email(memberResponse.getData().getMember().getEmail())
+                            .mobile(formattedMobile)
+                            .build())
+                    .build();
         }
 
         // 5. 유저 정보가 있을 때: JWT 발급 및 반환
         CustomUserDetails userDetails = new CustomUserDetails(userResponse);
 
+        String accessToken = jwtTokenProvider.generateToken(userDetails);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        return ResponseDto.<OAuth2LoginResponseDto>builder()
+                .success(true)
+                .message("로그인 성공")
+                .data(OAuth2LoginResponseDto.builder()
+                        .accessToken(accessToken)
+                        .refreshToken(refreshToken)
+                        .build())
+                .build();
+    }
+
+    @Override
+    public OAuth2LoginResponseDto completeOAuth2Signup(String tempJwt, OAuth2AdditionalSignupRequestDto additionalInfo) {
+        // 1. 임시 토큰 파싱 및 검증
+        Map<String, Object> claims = jwtTokenProvider.parseTemporaryToken(tempJwt);
+        String provider = (String) claims.get("provider");
+        String idNo = (String) claims.get("idNo");
+
+        // 2. 회원 정보 생성 (임시 토큰 정보 + 추가 입력 정보)
+        OAuth2UserCreateRequestDto createRequest = new OAuth2UserCreateRequestDto(
+                provider,
+                idNo,
+                additionalInfo.getName(),
+                additionalInfo.getMobile(),
+                additionalInfo.getEmail(),
+                additionalInfo.getBirth()
+        );
+
+        // 3. DB에 회원 저장
+        UserResponse userResponse = userAdapter.saveOAuth2User(createRequest);
+
+        // 4. JWT 토큰 발급
+        CustomUserDetails userDetails = new CustomUserDetails(userResponse);
         String accessToken = jwtTokenProvider.generateToken(userDetails);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
 

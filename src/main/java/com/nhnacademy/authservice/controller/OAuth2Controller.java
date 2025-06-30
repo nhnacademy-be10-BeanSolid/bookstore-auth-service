@@ -1,8 +1,10 @@
 package com.nhnacademy.authservice.controller;
 
+import com.nhnacademy.authservice.domain.OAuth2AdditionalSignupRequestDto;
 import com.nhnacademy.authservice.domain.OAuth2LoginRequestDto;
 import com.nhnacademy.authservice.domain.OAuth2LoginResponseDto;
-import com.nhnacademy.authservice.service.AuthService;
+import com.nhnacademy.authservice.domain.ResponseDto;
+import com.nhnacademy.authservice.service.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,7 +19,14 @@ public class OAuth2Controller {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<OAuth2LoginResponseDto> oauth2Login(@RequestBody OAuth2LoginRequestDto request) {
+    public ResponseEntity<ResponseDto<?>> oauth2Login(@RequestBody OAuth2LoginRequestDto request) {
         return ResponseEntity.ok(authService.oauth2Login(request.getProvider(), request.getCode()));
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<OAuth2LoginResponseDto> additionalSignup(
+            @RequestBody OAuth2AdditionalSignupRequestDto request) {
+        OAuth2LoginResponseDto response = authService.completeOAuth2Signup(request.getTempJwt(), request);
+        return ResponseEntity.ok(response);
     }
 }

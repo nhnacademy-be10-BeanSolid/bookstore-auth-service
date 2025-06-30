@@ -1,9 +1,6 @@
-package com.nhnacademy.authservice.service;
+package com.nhnacademy.authservice.service.auth;
 
-import com.nhnacademy.authservice.domain.LoginResponseDto;
-import com.nhnacademy.authservice.domain.OAuth2LoginResponseDto;
-import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
-import com.nhnacademy.authservice.domain.TokenParseResponseDto;
+import com.nhnacademy.authservice.domain.*;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public interface AuthService {
@@ -17,5 +14,7 @@ public interface AuthService {
 
     TokenParseResponseDto parseToken(String token);
 
-    OAuth2LoginResponseDto oauth2Login(String provider, String code);
+    ResponseDto<?> oauth2Login(String provider, String code);
+
+    OAuth2LoginResponseDto completeOAuth2Signup(String tempJwt, OAuth2AdditionalSignupRequestDto additionalInfo);
 }

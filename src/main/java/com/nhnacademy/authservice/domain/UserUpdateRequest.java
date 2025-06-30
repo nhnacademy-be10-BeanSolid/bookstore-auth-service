@@ -7,9 +7,8 @@ import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
-public class OAuth2UserCreateRequestDto {
-    private String provider;
-    private String providerId;
+public class UserUpdateRequest {
+    private String userPassword;
     private String userName;
     private String userPhoneNumber;
     private String userEmail;

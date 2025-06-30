@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(name = "paycoTokenClient", url = "https://id.payco.com")
-public interface PaycoTokenClient {
+public interface PaycoTokenAdapter {
     @PostMapping(value = "/oauth2.0/token", consumes = "application/x-www-form-urlencoded")
     OAuth2TokenResponse getToken(
             @RequestParam("grant_type") String grantType,

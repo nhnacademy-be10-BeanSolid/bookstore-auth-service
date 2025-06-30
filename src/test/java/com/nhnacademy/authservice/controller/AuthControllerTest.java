@@ -5,7 +5,7 @@ import com.nhnacademy.authservice.domain.LoginRequestDto;
 import com.nhnacademy.authservice.domain.LoginResponseDto;
 import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.domain.TokenParseResponseDto;
-import com.nhnacademy.authservice.service.AuthService;
+import com.nhnacademy.authservice.service.auth.AuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
