@@ -2,6 +2,9 @@ package com.nhnacademy.authservice.util;
 
 public class PhoneNumberUtils {
     public static String formatPaycoPhoneNumber(String paycoPhoneNumber) {
+        if(paycoPhoneNumber == null) {
+            return null;
+        }
         String digits = paycoPhoneNumber.replaceAll("[^0-9]", "");
         if(digits.startsWith("82") && digits.length() >= 12) {
             digits = digits.substring(2);
