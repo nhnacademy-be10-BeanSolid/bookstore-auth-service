@@ -1,6 +1,7 @@
 package com.nhnacademy.authservice.service.auth;
 
-import com.nhnacademy.authservice.domain.*;
+import com.nhnacademy.authservice.domain.request.OAuth2AdditionalSignupRequestDto;
+import com.nhnacademy.authservice.domain.response.*;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public interface AuthService {

@@ -1,7 +1,7 @@
 package com.nhnacademy.authservice.client.member;
 
 import com.nhnacademy.authservice.adapter.PaycoMemberAdapter;
-import com.nhnacademy.authservice.domain.OAuth2MemberResponse;
+import com.nhnacademy.authservice.domain.response.OAuth2MemberResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

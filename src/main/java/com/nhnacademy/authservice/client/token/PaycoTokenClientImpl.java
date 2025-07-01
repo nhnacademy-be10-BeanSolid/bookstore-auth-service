@@ -1,7 +1,7 @@
 package com.nhnacademy.authservice.client.token;
 
 import com.nhnacademy.authservice.adapter.PaycoTokenAdapter;
-import com.nhnacademy.authservice.domain.OAuth2TokenResponse;
+import com.nhnacademy.authservice.domain.response.OAuth2TokenResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

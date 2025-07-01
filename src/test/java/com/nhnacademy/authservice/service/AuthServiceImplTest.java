@@ -1,8 +1,8 @@
 package com.nhnacademy.authservice.service;
 
-import com.nhnacademy.authservice.domain.LoginResponseDto;
-import com.nhnacademy.authservice.domain.RefreshTokenResponseDto;
-import com.nhnacademy.authservice.domain.TokenParseResponseDto;
+import com.nhnacademy.authservice.domain.response.LoginResponseDto;
+import com.nhnacademy.authservice.domain.response.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.domain.response.TokenParseResponseDto;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
 import com.nhnacademy.authservice.service.auth.AuthServiceImpl;

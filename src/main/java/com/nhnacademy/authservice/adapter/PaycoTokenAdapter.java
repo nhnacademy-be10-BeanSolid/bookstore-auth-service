@@ -1,6 +1,6 @@
 package com.nhnacademy.authservice.adapter;
 
-import com.nhnacademy.authservice.domain.OAuth2TokenResponse;
+import com.nhnacademy.authservice.domain.response.OAuth2TokenResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;

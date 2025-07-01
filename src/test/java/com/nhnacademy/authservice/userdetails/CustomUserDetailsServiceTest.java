@@ -1,7 +1,7 @@
 package com.nhnacademy.authservice.userdetails;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
-import com.nhnacademy.authservice.domain.UserResponse;
+import com.nhnacademy.authservice.domain.response.UserResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

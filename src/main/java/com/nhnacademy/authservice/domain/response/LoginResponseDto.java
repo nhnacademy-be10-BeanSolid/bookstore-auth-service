@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.domain;
+package com.nhnacademy.authservice.domain.response;
 
 public record LoginResponseDto(
         String accessToken,

@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.domain;
+package com.nhnacademy.authservice.domain.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
