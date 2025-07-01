@@ -1,11 +1,16 @@
 package com.nhnacademy.authservice.util;
 
 public class PhoneNumberUtils {
+
+    private PhoneNumberUtils() {
+        throw new IllegalStateException("Utility class");
+    }
+
     public static String formatPaycoPhoneNumber(String paycoPhoneNumber) {
         if(paycoPhoneNumber == null) {
             return null;
         }
-        String digits = paycoPhoneNumber.replaceAll("[^0-9]", "");
+        String digits = paycoPhoneNumber.replaceAll("\\D", "");
         if(digits.startsWith("82") && digits.length() >= 12) {
             digits = digits.substring(2);
             if(digits.startsWith("10")) {
