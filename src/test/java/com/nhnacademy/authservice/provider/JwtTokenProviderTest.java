@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -104,7 +103,6 @@ class JwtTokenProviderTest {
     @Test
     @DisplayName("임시 토큰 타입이 TEMP가 아니면 예외 발생")
     void testTemporaryTokenTypeInvalid() {
-        UserDetails userDetails = mock(UserDetails.class);
         when(userDetails.getUsername()).thenReturn("testuser");
 
         when(userDetails.getAuthorities()).thenReturn(Collections.emptyList());

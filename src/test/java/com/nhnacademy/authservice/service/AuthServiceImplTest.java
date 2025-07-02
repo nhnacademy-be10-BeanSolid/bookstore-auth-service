@@ -212,8 +212,6 @@ class AuthServiceImplTest {
         String accessToken = "oauth_access_token";
         String idNo = "user123";
         String mobile = "821012345678";
-        String formattedMobile = "010-1234-5678";
-        String tempJwt = "temp_jwt";
         UserResponse userResponse = new UserResponse();
 
         OAuth2TokenResponse tokenResponse = OAuth2TokenResponse.builder().access_token(accessToken).build();

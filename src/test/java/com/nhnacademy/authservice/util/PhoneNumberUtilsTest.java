@@ -1,64 +1,23 @@
 package com.nhnacademy.authservice.util;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PhoneNumberUtilsTest {
 
-    @Test
-    void testConvertGlobalToKoreanPhoneNumber_NullInput() {
-        String phoneNumber = null;
-        String result = PhoneNumberUtils.convertGlobalToKoreanPhoneNumber(phoneNumber);
-
-        assertNull(result);
-    }
-
-    @Test
-    void testConvertGlobalToKoreanPhoneNumber_AlreadyFormatted() {
-        String input = "010-1234-5678";
-
+    @ParameterizedTest(name = "[{index}] input: \"{0}\", expected: \"{1}\"")
+    @CsvSource({
+            ",", // null input -> expect null
+            "'010-1234-5678', '010-1234-5678'", // already formatted
+            "'+82-10-1234-5678', '010-1234-5678'", // global format
+            "'821012345678', '010-1234-5678'", // global format without dash
+            "'+82-2-1234-5678', '+82-2-1234-5678'", // not mobile number
+            "'+82-10-1234-567', '+82-10-1234-567'" // invalid length
+    })
+    void testConvertGlobalToKoreanPhoneNumber(String input, String expected) {
         String result = PhoneNumberUtils.convertGlobalToKoreanPhoneNumber(input);
-
-        assertEquals("010-1234-5678", result);
-    }
-
-    @Test
-    void testConvertGlobalToKoreanPhoneNumber_GlobalFormat() {
-        String input = "+82-10-1234-5678";
-
-        String result = PhoneNumberUtils.convertGlobalToKoreanPhoneNumber(input);
-
-        assertEquals("010-1234-5678", result);
-    }
-
-    @Test
-    void testConvertGlobalToKoreanPhoneNumber_GlobalFormatWithoutDash() {
-        String input = "821012345678";
-
-        String result = PhoneNumberUtils.convertGlobalToKoreanPhoneNumber(input);
-
-        assertEquals("010-1234-5678", result);
-    }
-
-    @Test
-    void testConvertGlobalToKoreanPhoneNumber_NotMobileNumber() {
-        String input = "+82-2-1234-5678";
-
-        String result = PhoneNumberUtils.convertGlobalToKoreanPhoneNumber(input);
-
-        assertEquals("+82-2-1234-5678", result);
-    }
-
-    @Test
-    void testConvertGlobalToKoreanPhoneNumber_InvalidLength() {
-        // Arrange
-        String input = "+82-10-1234-567"; // 10자리 미만
-
-        // Act
-        String result = PhoneNumberUtils.convertGlobalToKoreanPhoneNumber(input);
-
-        // Assert
-        assertEquals("+82-10-1234-567", result);
+        assertEquals(expected, result);
     }
 }
