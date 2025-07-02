@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.service.auth;
+package com.nhnacademy.authservice.service;
 
 import com.nhnacademy.authservice.domain.request.OAuth2AdditionalSignupRequestDto;
 import com.nhnacademy.authservice.domain.response.*;

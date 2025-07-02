@@ -1,8 +1,10 @@
 package com.nhnacademy.authservice.domain.response;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class OAuth2TokenResponse {
     private String access_token;
     private String access_token_secret;

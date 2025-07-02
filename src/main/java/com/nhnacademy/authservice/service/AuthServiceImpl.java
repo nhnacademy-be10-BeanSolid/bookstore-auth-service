@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.service.auth;
+package com.nhnacademy.authservice.service;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
 import com.nhnacademy.authservice.client.member.OAuth2MemberClient;
@@ -98,7 +98,7 @@ public class AuthServiceImpl implements AuthService {
         OAuth2MemberClient memberClient = memberClientFactory.getClient(provider.toLowerCase());
         OAuth2MemberResponse memberResponse = memberClient.getMember(tokenResponse.getAccess_token());
 
-        String formattedMobile = PhoneNumberUtils.formatPaycoPhoneNumber(
+        String formattedMobile = PhoneNumberUtils.convertGlobalToKoreanPhoneNumber(
                 memberResponse.getData().getMember().getMobile()
         );
 

@@ -1,31 +1,31 @@
 package com.nhnacademy.authservice.domain.response;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
+@Data
 public class OAuth2MemberResponse {
     private Header header;
     private Data data;
 
-
-    @Getter
-    @Setter
+    @lombok.Data
     public static class Header {
         private boolean isSuccessful;
         private int resultCode;
         private String resultMessage;
     }
 
-    @Getter
-    @Setter
+    @lombok.Data
     public static class Data {
         private Member member;
     }
 
-    @Getter
-    @Setter
+    @lombok.Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Member {
         private String idNo;
         private String email;
@@ -43,8 +43,10 @@ public class OAuth2MemberResponse {
         private Address address;
     }
 
-    @Getter
-    @Setter
+    @lombok.Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Address {
         private String zipCode;
         private String address;

@@ -6,7 +6,7 @@ public class PhoneNumberUtils {
         throw new IllegalStateException("Utility class");
     }
 
-    public static String formatPaycoPhoneNumber(String paycoPhoneNumber) {
+    public static String convertGlobalToKoreanPhoneNumber(String paycoPhoneNumber) {
         if(paycoPhoneNumber == null) {
             return null;
         }
