@@ -1,6 +1,6 @@
 package com.nhnacademy.authservice.userdetails;
 
-import com.nhnacademy.authservice.domain.UserResponse;
+import com.nhnacademy.authservice.domain.response.UserResponse;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

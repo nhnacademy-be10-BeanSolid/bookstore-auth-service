@@ -12,9 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -86,6 +84,40 @@ public class JwtTokenProvider {
         String auth = claims.get("auth", String.class);
         if (auth == null) return List.of();
         return Arrays.asList(auth.split(","));
+    }
+
+    public String generateTemporaryToken(String provider, String idNo) {
+        // 임시 토큰 만료 시간: 10분
+        long tempTokenExpiration = 1000 * 60 * 10;
+
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + tempTokenExpiration);
+
+        return Jwts.builder()
+                .subject(provider + ":" + idNo)
+                .claim("provider", provider)
+                .claim("idNo", idNo)
+                .claim("type", "TEMP")
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(key, Jwts.SIG.HS256)
+                .compact();
+    }
+
+    public Map<String, Object> parseTemporaryToken(String tempJwt) {
+        try {
+            Claims claims = parseClaims(tempJwt);
+
+            // 토큰 타입 검증 (TEMP 여부 확인)
+            String tokenType = claims.get("type", String.class);
+            if(!"TEMP".equals(tokenType)) {
+                throw new JwtException("Invalid token type");
+            }
+
+            return new HashMap<>(claims);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new JwtException("Invalid or expired temporary token: " + e.getMessage(), e);
+        }
     }
 
 }
