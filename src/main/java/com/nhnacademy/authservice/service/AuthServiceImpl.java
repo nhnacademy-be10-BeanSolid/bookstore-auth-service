@@ -112,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
-        // 4. 유저 정보가 없을 때: 임시 JWT 발급 & Redis에 OAuth2 유저 정보 저장
+        // 4. 유저 정보가 없을 때: 임시 JWT 발급
         if(userResponse == null) {
 
             String tempJwt = jwtTokenProvider.generateTemporaryToken(
