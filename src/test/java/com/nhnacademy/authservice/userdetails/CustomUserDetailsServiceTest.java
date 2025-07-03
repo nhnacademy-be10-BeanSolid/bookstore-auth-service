@@ -2,6 +2,7 @@ package com.nhnacademy.authservice.userdetails;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
 import com.nhnacademy.authservice.domain.response.UserResponse;
+import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,7 @@ class CustomUserDetailsServiceTest {
         userResponse.setUserId("testuser");
         userResponse.setUserPassword("password");
         userResponse.setAuth(true);
+        userResponse.setUserStatus("ACTIVE");
 
         when(userAdapter.getUserByUsername("testuser")).thenReturn(userResponse);
 
@@ -48,6 +50,21 @@ class CustomUserDetailsServiceTest {
 
         assertThrows(UsernameNotFoundException.class, () -> {
             customUserDetailsService.loadUserByUsername("unknown");
+        });
+    }
+
+    @Test
+    @DisplayName("탈퇴한 사용자인 경우 UserWithDrawnException 발생")
+    void loadUserByUsername_throwsUserWithdrawnException_whenUserIsWithdrawn() {
+        UserResponse userResponse = new UserResponse();
+        userResponse.setUserId("withdrawnuser");
+        userResponse.setUserPassword("password");
+        userResponse.setUserStatus("WITHDRAWN");
+
+        when(userAdapter.getUserByUsername("withdrawnuser")).thenReturn(userResponse);
+
+        assertThrows(UserWithdrawnException.class, () -> {
+            customUserDetailsService.loadUserByUsername("withdrawnuser");
         });
     }
 }
