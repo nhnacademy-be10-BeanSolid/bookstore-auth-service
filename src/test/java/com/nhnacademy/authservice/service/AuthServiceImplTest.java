@@ -7,6 +7,7 @@ import com.nhnacademy.authservice.domain.request.OAuth2AdditionalSignupRequestDt
 import com.nhnacademy.authservice.domain.request.OAuth2UserCreateRequestDto;
 import com.nhnacademy.authservice.domain.response.*;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
+import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
@@ -213,6 +214,7 @@ class AuthServiceImplTest {
         String idNo = "user123";
         String mobile = "821012345678";
         UserResponse userResponse = new UserResponse();
+        userResponse.setUserStatus("ACTIVE");
 
         OAuth2TokenResponse tokenResponse = OAuth2TokenResponse.builder().access_token(accessToken).build();
 
@@ -273,5 +275,38 @@ class AuthServiceImplTest {
         assertEquals("refresh_token", response.getRefreshToken());
     }
 
+    @Test
+    void oauth2Login_withdrawnUser_throwsUserWithdrawnException() {
+        String provider = "payco";
+        String code = "auth_code";
+        String accessToken = "oauth_access_token";
+        String idNo = "user123";
+        String mobile = "821012345678";
 
+        OAuth2TokenResponse tokenResponse = OAuth2TokenResponse.builder().access_token(accessToken).build();
+
+        OAuth2MemberResponse memberResponse = new OAuth2MemberResponse();
+        OAuth2MemberResponse.Data data = new OAuth2MemberResponse.Data();
+        OAuth2MemberResponse.Member member = new OAuth2MemberResponse.Member();
+        member.setIdNo(idNo);
+        member.setName("Name");
+        member.setEmail("email@test.com");
+        member.setMobile(mobile);
+        data.setMember(member);
+        memberResponse.setData(data);
+
+        UserResponse withdrawnUser = new UserResponse();
+        withdrawnUser.setUserId(provider.toUpperCase() + idNo);
+        withdrawnUser.setUserStatus("WITHDRAWN");
+
+        when(tokenClientFactory.getClient(provider)).thenReturn(tokenClient);
+        when(tokenClient.getToken(code)).thenReturn(tokenResponse);
+        when(memberClientFactory.getClient(provider)).thenReturn(memberClient);
+        when(memberClient.getMember(accessToken)).thenReturn(memberResponse);
+        when(userAdapter.getUserByUsername(anyString())).thenReturn(withdrawnUser);
+
+        assertThrows(UserWithdrawnException.class, () -> {
+            authService.oauth2Login(provider, code);
+        });
+    }
 }

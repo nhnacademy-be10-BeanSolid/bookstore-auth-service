@@ -29,6 +29,15 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleUserWithdrawn() throws Exception {
+        mockMvc.perform(get("/test/user-withdrawn")) // 이 경로는 UserWithdrawnException을 발생시키는 테스트 컨트롤러 엔드포인트입니다.
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("탈퇴한 사용자입니다."))
+                .andExpect(jsonPath("$.time").exists());
+    }
+
+    @Test
     void handleFeignError() throws Exception {
         mockMvc.perform(get("/test/feign-error"))
                 .andExpect(status().isBadRequest())

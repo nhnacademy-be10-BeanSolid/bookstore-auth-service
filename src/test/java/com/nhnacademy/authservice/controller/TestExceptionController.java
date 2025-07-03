@@ -1,5 +1,6 @@
 package com.nhnacademy.authservice.controller;
 
+import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,5 +24,9 @@ public class TestExceptionController {
     @GetMapping("/any-exception")
     public void anyException() {
         throw new RuntimeException("알 수 없는 오류");
+    }
+
+    @GetMapping("/user-withdrawn")
+    public void userWithdrawn() { throw new UserWithdrawnException("탈퇴한 사용자입니다.");
     }
 }
