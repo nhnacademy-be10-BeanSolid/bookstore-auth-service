@@ -2,6 +2,7 @@ package com.nhnacademy.authservice.userdetails;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
 import com.nhnacademy.authservice.domain.response.UserResponse;
+import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,6 +20,9 @@ public class CustomUserDetailsService implements UserDetailsService {
         UserResponse userResponse = userAdapter.getUserByUsername(username);
         if(userResponse == null) {
             throw new UsernameNotFoundException(username + "을(를) 찾을 수 없습니다.");
+        }
+        if(userResponse.getUserStatus().equals("WITHDRAWN")) {
+            throw new UserWithdrawnException(username + "은(는) 탈퇴한 사용자입니다.");
         }
         // UserDetails 구현체로 랩핑해 반환
         return new CustomUserDetails(userResponse);

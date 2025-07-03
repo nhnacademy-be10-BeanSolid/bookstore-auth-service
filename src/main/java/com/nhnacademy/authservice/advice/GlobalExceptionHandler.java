@@ -1,5 +1,6 @@
 package com.nhnacademy.authservice.advice;
 
+import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -20,6 +21,17 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now()
         );
         return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    }
+
+    // 탈퇴한 사용자의 로그인
+    @ExceptionHandler(UserWithdrawnException.class)
+    public ResponseEntity<ErrorResponseDto> handleUserWithdrawn(UserWithdrawnException ex) {
+        ErrorResponseDto error = new ErrorResponseDto(
+                HttpStatus.FORBIDDEN.value(),
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 
     // FeignClient 등 외부 API 호출 오류

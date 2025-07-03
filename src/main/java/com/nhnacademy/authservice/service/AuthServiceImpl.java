@@ -7,6 +7,7 @@ import com.nhnacademy.authservice.domain.request.OAuth2AdditionalSignupRequestDt
 import com.nhnacademy.authservice.domain.request.OAuth2UserCreateRequestDto;
 import com.nhnacademy.authservice.domain.response.*;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
+import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
@@ -41,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
         UserDetails userDetails = authentication(id, password);
         String accessToken = jwtTokenProvider.generateToken(userDetails);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+        userAdapter.updateLastLoginAt(id);
         return new LoginResponseDto(accessToken, refreshToken);
     }
 
@@ -131,12 +133,16 @@ public class AuthServiceImpl implements AuthService {
                             .build())
                     .build();
         }
+        if(userResponse.getUserStatus().equals("WITHDRAWN")) {
+            throw new UserWithdrawnException(userResponse.getUserId() + "은(는) 탈퇴한 사용자입니다.");
+        }
 
         // 5. 유저 정보가 있을 때: JWT 발급 및 반환
         CustomUserDetails userDetails = new CustomUserDetails(userResponse);
 
         String accessToken = jwtTokenProvider.generateToken(userDetails);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+        userAdapter.updateLastLoginAt(userResponse.getUserId());
 
         return ResponseDto.<OAuth2LoginResponseDto>builder()
                 .success(true)
@@ -172,6 +178,7 @@ public class AuthServiceImpl implements AuthService {
         CustomUserDetails userDetails = new CustomUserDetails(userResponse);
         String accessToken = jwtTokenProvider.generateToken(userDetails);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+        userAdapter.updateLastLoginAt(userResponse.getUserId());
 
         return new OAuth2LoginResponseDto(accessToken, refreshToken);
     }
