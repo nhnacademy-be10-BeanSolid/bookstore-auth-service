@@ -11,9 +11,12 @@ import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
+import com.nhnacademy.authservice.provider.UserType;
+import com.nhnacademy.authservice.service.domain.LoginTokens;
 import com.nhnacademy.authservice.userdetails.CustomUserDetails;
 import com.nhnacademy.authservice.util.PhoneNumberUtils;
 import feign.FeignException;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,56 +26,40 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
+/**
+ * 인증 관련 비즈니스 로직을 처리하는 Service 구현체
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
-
     private final OAuth2TokenClientFactory tokenClientFactory;
     private final OAuth2MemberClientFactory memberClientFactory;
-
     private final UserAdapter userAdapter;
 
     @Override
     public LoginResponseDto login(String id, String password) {
         UserDetails userDetails = authentication(id, password);
-        String accessToken = jwtTokenProvider.generateToken(userDetails);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
-        userAdapter.updateLastLoginAt(id);
-        return new LoginResponseDto(accessToken, refreshToken);
-    }
-
-
-    @Override
-    public UserDetails authentication(String username, String password) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password));
-        return (UserDetails) authentication.getPrincipal();
+        LoginTokens tokens = issueTokens(userDetails, UserType.LOCAL);
+        return new LoginResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
     }
 
     @Override
     public RefreshTokenResponseDto refreshToken(String refreshToken) {
-        // 1. RefreshToken 유효성 검증
         if(!jwtTokenProvider.validateToken(refreshToken)) {
             throw new InvalidTokenException("Invalid Refresh Token");
         }
 
-        // 2. RefreshToken 사용자 정보 추출
         String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
+        UserDetails user = userDetailsService.loadUserByUsername(username);
+        UserType userType = jwtTokenProvider.getUserTypeFromToken(refreshToken);
+        LoginTokens tokens = issueTokens(user, userType);
 
-        // 3. 사용자 정보로 UserDetails 조회
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-        // 4. 새 AccessToken 및 RefreshToken 발급
-        String newAccessToken = jwtTokenProvider.generateToken(userDetails);
-        String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
-
-        // 5. 응답 반환
-        return new RefreshTokenResponseDto(newAccessToken, newRefreshToken);
+        return new RefreshTokenResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
     }
 
     @Override
@@ -87,7 +74,8 @@ public class AuthServiceImpl implements AuthService {
         }
         String username = jwtTokenProvider.getUsernameFromToken(token);
         List<String> authorities = jwtTokenProvider.getAuthoritiesFromToken(token);
-        return new TokenParseResponseDto(username, authorities);
+        UserType userType = jwtTokenProvider.getUserTypeFromToken(token);
+        return new TokenParseResponseDto(username, authorities, userType);
     }
 
     @Override
@@ -105,18 +93,20 @@ public class AuthServiceImpl implements AuthService {
         );
 
         // 3. DB 에서 사용자 조회
-        UserResponse userResponse = null;
+        String usernameKey = provider.toUpperCase() + memberResponse.getData().getMember().getIdNo();
+        UserResponse userResponse;
         try {
-            userResponse = userAdapter.getUserByUsername(provider.toUpperCase() + memberResponse.getData().getMember().getIdNo());
-        } catch (FeignException e) {
-            if(e.status() != 404) {
-                throw e;
+            userResponse = userAdapter.getUserByUsername(usernameKey);
+        } catch (FeignException fe) {
+            if(fe.status() != 404) {
+                throw fe;
             }
+            userResponse = null;
         }
+
 
         // 4. 유저 정보가 없을 때: 임시 JWT 발급
         if(userResponse == null) {
-
             String tempJwt = jwtTokenProvider.generateTemporaryToken(
                     provider.toUpperCase(),
                     memberResponse.getData().getMember().getIdNo()
@@ -133,38 +123,35 @@ public class AuthServiceImpl implements AuthService {
                             .build())
                     .build();
         }
-        if(userResponse.getUserStatus().equals("WITHDRAWN")) {
+        if("WITHDRAWN".equals(userResponse.getUserStatus())) {
             throw new UserWithdrawnException(userResponse.getUserId() + "은(는) 탈퇴한 사용자입니다.");
         }
 
         // 5. 유저 정보가 있을 때: JWT 발급 및 반환
         CustomUserDetails userDetails = new CustomUserDetails(userResponse);
-
-        String accessToken = jwtTokenProvider.generateToken(userDetails);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
-        userAdapter.updateLastLoginAt(userResponse.getUserId());
+        LoginTokens tokens = issueTokens(userDetails, UserType.OAUTH2);
+        OAuth2LoginResponseDto resp = OAuth2LoginResponseDto.builder()
+                .accessToken(tokens.getAccessToken())
+                .refreshToken(tokens.getRefreshToken())
+                .build();
 
         return ResponseDto.<OAuth2LoginResponseDto>builder()
                 .success(true)
                 .message("로그인 성공")
-                .data(OAuth2LoginResponseDto.builder()
-                        .accessToken(accessToken)
-                        .refreshToken(refreshToken)
-                        .build())
+                .data(resp)
                 .build();
     }
 
     @Override
     public OAuth2LoginResponseDto completeOAuth2Signup(String tempJwt, OAuth2AdditionalSignupRequestDto additionalInfo) {
         // 1. 임시 토큰 파싱 및 검증
-        Map<String, Object> claims = jwtTokenProvider.parseTemporaryToken(tempJwt);
-        String provider = (String) claims.get("provider");
-        String idNo = (String) claims.get("idNo");
+        Claims claims = jwtTokenProvider.parseTemporaryToken(tempJwt);
+        String provider = claims.get("provider", String.class);
+        String idNo = claims.get("idNo", String.class);
 
         // 2. 회원 정보 생성 (임시 토큰 정보 + 추가 입력 정보)
         OAuth2UserCreateRequestDto createRequest = new OAuth2UserCreateRequestDto(
-                provider,
-                idNo,
+                provider, idNo,
                 additionalInfo.getName(),
                 additionalInfo.getMobile(),
                 additionalInfo.getEmail(),
@@ -172,14 +159,32 @@ public class AuthServiceImpl implements AuthService {
         );
 
         // 3. DB에 회원 저장
-        UserResponse userResponse = userAdapter.saveOAuth2User(createRequest);
+        UserResponse saved = userAdapter.saveOAuth2User(createRequest);
 
         // 4. JWT 토큰 발급
-        CustomUserDetails userDetails = new CustomUserDetails(userResponse);
-        String accessToken = jwtTokenProvider.generateToken(userDetails);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
-        userAdapter.updateLastLoginAt(userResponse.getUserId());
+        CustomUserDetails userDetails = new CustomUserDetails(saved);
+        LoginTokens tokens = issueTokens(userDetails, UserType.OAUTH2);
 
-        return new OAuth2LoginResponseDto(accessToken, refreshToken);
+        return new OAuth2LoginResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
+    }
+
+    private UserDetails authentication(String username, String password) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password));
+        return (UserDetails) authentication.getPrincipal();
+    }
+
+    /**
+     * 토큰 발급 공통 로직
+     *
+     * @param userDetails 사용자 상세 정보
+     * @param userType 사용자 유형 (LOCAL/OAUTH2)
+     * @return accessToken, refreshToken을 담은 DTO
+     */
+    private LoginTokens issueTokens(UserDetails userDetails, UserType userType) {
+        String accessToken = jwtTokenProvider.generateAccessToken(userDetails, userType);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails, userType);
+        userAdapter.updateLastLoginAt(userDetails.getUsername());
+        return new LoginTokens(accessToken, refreshToken);
     }
 }

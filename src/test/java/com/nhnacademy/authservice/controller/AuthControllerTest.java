@@ -5,6 +5,7 @@ import com.nhnacademy.authservice.domain.request.LoginRequestDto;
 import com.nhnacademy.authservice.domain.response.LoginResponseDto;
 import com.nhnacademy.authservice.domain.response.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.domain.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.provider.UserType;
 import com.nhnacademy.authservice.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -92,7 +93,7 @@ class AuthControllerTest {
     void parseToken_success() throws Exception {
         // given
         List<String> authorities = List.of("ROLE_USER", "ROLE_ADMIN");
-        TokenParseResponseDto parseResponse = new TokenParseResponseDto("testuser", authorities);
+        TokenParseResponseDto parseResponse = new TokenParseResponseDto("testuser", authorities, UserType.LOCAL);
         when(authService.parseToken(anyString())).thenReturn(parseResponse);
 
         // when & then
