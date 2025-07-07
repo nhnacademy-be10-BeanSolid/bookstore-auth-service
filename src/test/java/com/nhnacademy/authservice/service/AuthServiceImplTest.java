@@ -11,66 +11,52 @@ import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
+import com.nhnacademy.authservice.provider.UserType;
 import com.nhnacademy.authservice.userdetails.CustomUserDetails;
 import feign.FeignException;
+import feign.Request;
+import feign.Response;
+import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImplTest {
-    @Mock
-    private AuthenticationManager authenticationManager;
-
-    @Mock
-    private UserDetailsService userDetailsService;
-
-    @Mock
-    private JwtTokenProvider jwtTokenProvider;
-
-    @Mock
-    private OAuth2TokenClientFactory tokenClientFactory;
-
-    @Mock
-    private OAuth2MemberClientFactory memberClientFactory;
-
-    @Mock
-    private OAuth2TokenClient tokenClient;
-
-    @Mock
-    private OAuth2MemberClient memberClient;
-
-    @Mock
-    UserAdapter userAdapter;
-
-    @InjectMocks
-    AuthServiceImpl authService;
-
-    @Mock
-    UserDetails userDetails;
-
-    @Mock
-    Authentication authentication;
+    @Mock private AuthenticationManager authenticationManager;
+    @Mock private UserDetailsService userDetailsService;
+    @Mock private JwtTokenProvider jwtTokenProvider;
+    @Mock private OAuth2TokenClientFactory tokenClientFactory;
+    @Mock private OAuth2MemberClientFactory memberClientFactory;
+    @Mock private OAuth2TokenClient tokenClient;
+    @Mock private OAuth2MemberClient memberClient;
+    @Mock UserAdapter userAdapter;
+    @Mock UserDetails userDetails;
+    @Mock Authentication authentication;
+    @Mock PasswordEncoder passwordEncoder;
+    @InjectMocks AuthServiceImpl authService;
 
     @Test
     void login_success() {
+        // given
         String id = "user";
         String pw = "pw";
         String accessToken = "access-token";
@@ -79,41 +65,31 @@ class AuthServiceImplTest {
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(jwtTokenProvider.generateToken(userDetails)).thenReturn(accessToken);
-        when(jwtTokenProvider.generateRefreshToken(userDetails)).thenReturn(refreshToken);
+        when(userDetails.getUsername()).thenReturn(id);
+        when(jwtTokenProvider.generateAccessToken(userDetails, UserType.LOCAL)).thenReturn(accessToken);
+        when(jwtTokenProvider.generateRefreshToken(userDetails, UserType.LOCAL)).thenReturn(refreshToken);
 
         LoginResponseDto result = authService.login(id, pw);
 
         assertEquals(accessToken, result.accessToken());
         assertEquals(refreshToken, result.refreshToken());
-    }
-
-    @Test
-    void authentication_success() {
-        String username = "user";
-        String password = "pw";
-        when(authenticationManager.authenticate(any())).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(userDetails);
-
-        UserDetails result = authService.authentication(username, password);
-
-        assertEquals(userDetails, result);
+        verify(userAdapter).updateLastLoginAt(id);
     }
 
     @Test
     void refreshToken_success() {
         String refreshToken = "refresh-token";
         String username = "user";
+        UserType userType = UserType.LOCAL;
         String newAccessToken = "new-access";
         String newRefreshToken = "new-refresh";
 
         when(jwtTokenProvider.validateToken(refreshToken)).thenReturn(true);
-
         when(jwtTokenProvider.getUsernameFromToken(refreshToken)).thenReturn(username);
+        when(jwtTokenProvider.getUserTypeFromToken(refreshToken)).thenReturn(userType);
         when(userDetailsService.loadUserByUsername(username)).thenReturn(userDetails);
-
-        when(jwtTokenProvider.generateToken(userDetails)).thenReturn(newAccessToken);
-        when(jwtTokenProvider.generateRefreshToken(userDetails)).thenReturn(newRefreshToken);
+        when(jwtTokenProvider.generateAccessToken(userDetails, userType)).thenReturn(newAccessToken);
+        when(jwtTokenProvider.generateRefreshToken(userDetails, userType)).thenReturn(newRefreshToken);
 
         RefreshTokenResponseDto result = authService.refreshToken(refreshToken);
 
@@ -236,8 +212,8 @@ class AuthServiceImplTest {
 
         when(userAdapter.getUserByUsername(anyString())).thenReturn(userResponse);
 
-        when(jwtTokenProvider.generateToken(any(CustomUserDetails.class))).thenReturn("access-token");
-        when(jwtTokenProvider.generateRefreshToken(any(CustomUserDetails.class))).thenReturn("refresh-token");
+        when(jwtTokenProvider.generateAccessToken(any(CustomUserDetails.class), any())).thenReturn("access-token");
+        when(jwtTokenProvider.generateRefreshToken(any(CustomUserDetails.class), any())).thenReturn("refresh-token");
 
         ResponseDto<?> response = authService.oauth2Login(provider, code);
 
@@ -258,21 +234,34 @@ class AuthServiceImplTest {
                 .birth(LocalDate.parse("1990-01-01"))
                 .build();
         UserResponse savedUser = new UserResponse();
+        savedUser.setUserId("PAYCOuser123");
+        savedUser.setUserStatus("ACTIVE");
 
-        when(jwtTokenProvider.parseTemporaryToken(tempJwt)).thenReturn(Map.of(
-                "provider", "PAYCO",
-                "idNo", "user123"
-        ));
+        Claims claims = Mockito.mock(Claims.class);
+        when(claims.get("provider", String.class)).thenReturn("PAYCO");
+        when(claims.get("idNo", String.class)).thenReturn("user123");
 
+        when(jwtTokenProvider.parseTemporaryToken(tempJwt)).thenReturn(claims);
         when(userAdapter.saveOAuth2User(any(OAuth2UserCreateRequestDto.class))).thenReturn(savedUser);
 
-        when(jwtTokenProvider.generateToken(any(CustomUserDetails.class))).thenReturn("access_token");
-        when(jwtTokenProvider.generateRefreshToken(any(CustomUserDetails.class))).thenReturn("refresh_token");
+        when(jwtTokenProvider.generateAccessToken(any(CustomUserDetails.class), eq(UserType.OAUTH2))).thenReturn("access-token");
+        when(jwtTokenProvider.generateRefreshToken(any(CustomUserDetails.class), any())).thenReturn("refresh-token");
 
         OAuth2LoginResponseDto response = authService.completeOAuth2Signup(tempJwt, additionalInfo);
 
-        assertEquals("access_token", response.getAccessToken());
-        assertEquals("refresh_token", response.getRefreshToken());
+        assertEquals("access-token", response.getAccessToken());
+        assertEquals("refresh-token", response.getRefreshToken());
+
+        ArgumentCaptor<OAuth2UserCreateRequestDto> captor = ArgumentCaptor.forClass(OAuth2UserCreateRequestDto.class);
+        verify(userAdapter).saveOAuth2User(captor.capture());
+
+        OAuth2UserCreateRequestDto dto = captor.getValue();
+        assertEquals("PAYCO", dto.getProvider());
+        assertEquals("user123", dto.getProviderId());
+        assertEquals("Name", dto.getUserName());
+        assertEquals("010-1234-5678", dto.getUserPhoneNumber());
+        assertEquals("email@test.com", dto.getUserEmail());
+        assertEquals(LocalDate.parse("1990-01-01"), dto.getUserBirth());
     }
 
     @Test
@@ -309,4 +298,47 @@ class AuthServiceImplTest {
             authService.oauth2Login(provider, code);
         });
     }
+
+    @Test
+    void verifyPassword_validUser_returnsTrue() {
+        String userId = "user123";
+        String rawPw = "pw";
+        UserResponse userResponse = new UserResponse();
+        userResponse.setUserStatus("ACTIVE");
+        userResponse.setUserPassword("encrypted");
+        when(userAdapter.getUserByUsername(userId)).thenReturn(userResponse);
+        when(passwordEncoder.matches(rawPw, "encrypted")).thenReturn(true);
+
+        boolean result = authService.verifyPassword(userId, rawPw);
+
+        assertTrue(result);
+    }
+
+    @Test
+    void verifyPassword_userResponseNull_returnsFalse() {
+        String userId = "user123";
+        String pw = "pw";
+
+        when(userAdapter.getUserByUsername(userId)).thenReturn(null);
+
+        boolean result = authService.verifyPassword(userId, pw);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void verifyPassword_feignErrorNon404_throwsFeignException() {
+        String userId = "user123";
+        String pw = "pw";
+        FeignException fe = FeignException.errorStatus("error", Response.builder()
+                .status(500).request(Request.create(Request.HttpMethod.GET, "/", Map.of(), null, null, null))
+                .build());
+
+        when(userAdapter.getUserByUsername(userId)).thenThrow(fe);
+
+        assertThrows(FeignException.class, () ->
+                authService.verifyPassword(userId, pw));
+    }
+
+
 }

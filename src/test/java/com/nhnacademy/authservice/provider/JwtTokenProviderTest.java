@@ -39,7 +39,7 @@ class JwtTokenProviderTest {
         when(userDetails.getUsername()).thenReturn("testuser");
         when(userDetails.getAuthorities()).thenReturn(Collections.emptyList());
 
-        String token = jwtTokenProvider.generateToken(userDetails);
+        String token = jwtTokenProvider.generateAccessToken(userDetails, UserType.LOCAL);
 
         assertNotNull(token);
         assertTrue(jwtTokenProvider.validateToken(token));
@@ -51,7 +51,7 @@ class JwtTokenProviderTest {
     void testGenerateAndValidateRefreshToken() {
         when(userDetails.getUsername()).thenReturn("testuser");
 
-        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails, UserType.LOCAL);
 
         assertNotNull(refreshToken);
         assertTrue(jwtTokenProvider.validateToken(refreshToken));
@@ -79,7 +79,7 @@ class JwtTokenProviderTest {
         when(userDetails.getUsername()).thenReturn("testuser");
         when(userDetails.getAuthorities()).thenReturn(Collections.emptyList());
 
-        String token = jwtTokenProvider.generateToken(userDetails);
+        String token = jwtTokenProvider.generateAccessToken(userDetails, UserType.LOCAL);
         List<?> authorities = jwtTokenProvider.getAuthoritiesFromToken(token);
 
         assertTrue(authorities.size() == 1 || authorities.isEmpty());
@@ -107,7 +107,7 @@ class JwtTokenProviderTest {
 
         when(userDetails.getAuthorities()).thenReturn(Collections.emptyList());
 
-        String normalToken = jwtTokenProvider.generateToken(userDetails);
+        String normalToken = jwtTokenProvider.generateAccessToken(userDetails, UserType.LOCAL);
 
         assertThrows(JwtException.class, () ->
                 jwtTokenProvider.parseTemporaryToken(normalToken));
