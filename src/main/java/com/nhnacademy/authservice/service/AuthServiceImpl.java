@@ -20,7 +20,6 @@ import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,8 +44,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponseDto login(String id, String password) {
-        UserDetails userDetails = authentication(id, password);
+        UserDetails userDetails = (UserDetails) authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(id, password)).getPrincipal();
         LoginTokens tokens = issueTokens(userDetails, UserType.LOCAL);
+        userAdapter.updateLastLoginAt(userDetails.getUsername());
         return new LoginResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
     }
 
@@ -175,29 +175,19 @@ public class AuthServiceImpl implements AuthService {
         try {
             UserResponse userResponse = userAdapter.getUserByUsername(userId);
 
-            if(userResponse == null) {
-                return false;
-            }
-
-            if("WITHDRAWN".equals(userResponse.getUserStatus())) {
+            if (userResponse == null) {
                 return false;
             }
 
             return passwordEncoder.matches(password, userResponse.getUserPassword());
         } catch (FeignException fe) {
-            if(fe.status() == 404) {
+            if (fe.status() == 404) {
                 return false;
             }
             throw fe;
         } catch (Exception e) {
             return false;
         }
-    }
-
-    private UserDetails authentication(String username, String password) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password));
-        return (UserDetails) authentication.getPrincipal();
     }
 
     /**
@@ -210,7 +200,6 @@ public class AuthServiceImpl implements AuthService {
     private LoginTokens issueTokens(UserDetails userDetails, UserType userType) {
         String accessToken = jwtTokenProvider.generateAccessToken(userDetails, userType);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails, userType);
-        userAdapter.updateLastLoginAt(userDetails.getUsername());
         return new LoginTokens(accessToken, refreshToken);
     }
 }
