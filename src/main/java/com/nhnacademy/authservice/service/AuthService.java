@@ -15,4 +15,6 @@ public interface AuthService {
     ResponseDto<?> oauth2Login(String provider, String code);
 
     OAuth2LoginResponseDto completeOAuth2Signup(String tempJwt, OAuth2AdditionalSignupRequestDto additionalInfo);
+
+    boolean verifyPassword(String userId, String password);
 }

@@ -23,6 +23,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -40,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final OAuth2TokenClientFactory tokenClientFactory;
     private final OAuth2MemberClientFactory memberClientFactory;
     private final UserAdapter userAdapter;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public LoginResponseDto login(String id, String password) {
@@ -166,6 +168,30 @@ public class AuthServiceImpl implements AuthService {
         LoginTokens tokens = issueTokens(userDetails, UserType.OAUTH2);
 
         return new OAuth2LoginResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
+    }
+
+    @Override
+    public boolean verifyPassword(String userId, String password) {
+        try {
+            UserResponse userResponse = userAdapter.getUserByUsername(userId);
+
+            if(userResponse == null) {
+                return false;
+            }
+
+            if("WITHDRAWN".equals(userResponse.getUserStatus())) {
+                return false;
+            }
+
+            return passwordEncoder.matches(password, userResponse.getUserPassword());
+        } catch (FeignException fe) {
+            if(fe.status() == 404) {
+                return false;
+            }
+            throw fe;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private UserDetails authentication(String username, String password) {
