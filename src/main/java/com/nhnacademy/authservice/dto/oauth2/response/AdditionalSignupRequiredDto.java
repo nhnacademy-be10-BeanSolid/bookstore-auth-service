@@ -1,16 +1,13 @@
-package com.nhnacademy.authservice.domain.request;
+package com.nhnacademy.authservice.dto.oauth2.response;
 
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDate;
-
 @Data
 @Builder
-public class OAuth2AdditionalSignupRequestDto {
+public class AdditionalSignupRequiredDto {
     private String tempJwt;
     private String name;
     private String email;
     private String mobile;
-    private LocalDate birth;
 }

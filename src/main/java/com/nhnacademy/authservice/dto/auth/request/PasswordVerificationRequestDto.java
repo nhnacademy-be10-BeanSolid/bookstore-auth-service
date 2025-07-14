@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.domain.request;
+package com.nhnacademy.authservice.dto.auth.request;
 
 import jakarta.validation.constraints.NotBlank;
 

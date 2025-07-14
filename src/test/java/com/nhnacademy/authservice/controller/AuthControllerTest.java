@@ -1,10 +1,10 @@
 package com.nhnacademy.authservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nhnacademy.authservice.domain.request.LoginRequestDto;
-import com.nhnacademy.authservice.domain.response.LoginResponseDto;
-import com.nhnacademy.authservice.domain.response.RefreshTokenResponseDto;
-import com.nhnacademy.authservice.domain.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.dto.auth.request.LoginRequestDto;
+import com.nhnacademy.authservice.dto.auth.response.LoginResponseDto;
+import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
 import com.nhnacademy.authservice.provider.UserType;
 import com.nhnacademy.authservice.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
