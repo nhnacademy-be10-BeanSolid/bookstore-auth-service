@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class NonMemberLoginRequest {
-    private String orderId;
+    private String orderNumber;
     private String password;
 }

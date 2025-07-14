@@ -15,4 +15,7 @@ public interface UserAdapter {
 
     @PutMapping("/users/me/lastloginat")
     UserResponse updateLastLoginAt(@RequestHeader("X-USER-ID") String userId);
+
+    @GetMapping("/users/guests/{orderId}/password")
+    String getGuestPassword(@PathVariable("orderId") Long orderId);
 }
