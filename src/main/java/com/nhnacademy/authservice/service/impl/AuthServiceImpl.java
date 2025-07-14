@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.service;
+package com.nhnacademy.authservice.service.impl;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
 import com.nhnacademy.authservice.client.member.OAuth2MemberClient;
@@ -7,8 +7,8 @@ import com.nhnacademy.authservice.dto.auth.response.LoginResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2AdditionalSignupRequestDto;
-import com.nhnacademy.authservice.dto.oauth2.response.*;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2UserCreateRequestDto;
+import com.nhnacademy.authservice.dto.oauth2.response.*;
 import com.nhnacademy.authservice.dto.user.response.UserResponse;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.exception.UserWithdrawnException;
@@ -16,7 +16,7 @@ import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
 import com.nhnacademy.authservice.provider.UserType;
-import com.nhnacademy.authservice.service.domain.LoginTokens;
+import com.nhnacademy.authservice.service.AuthService;
 import com.nhnacademy.authservice.userdetails.CustomUserDetails;
 import com.nhnacademy.authservice.util.PhoneNumberUtils;
 import feign.FeignException;
@@ -51,7 +51,7 @@ public class AuthServiceImpl implements AuthService {
         UserDetails userDetails = (UserDetails) authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(id, password)).getPrincipal();
         LoginTokens tokens = issueTokens(userDetails, UserType.LOCAL);
         userAdapter.updateLastLoginAt(userDetails.getUsername());
-        return new LoginResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
+        return new LoginResponseDto(tokens.accessToken(), tokens.refreshToken());
     }
 
     @Override
@@ -65,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
         UserType userType = jwtTokenProvider.getUserTypeFromToken(refreshToken);
         LoginTokens tokens = issueTokens(user, userType);
 
-        return new RefreshTokenResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
+        return new RefreshTokenResponseDto(tokens.accessToken(), tokens.refreshToken());
     }
 
     @Override
@@ -137,8 +137,8 @@ public class AuthServiceImpl implements AuthService {
         CustomUserDetails userDetails = new CustomUserDetails(userResponse);
         LoginTokens tokens = issueTokens(userDetails, UserType.OAUTH2);
         OAuth2LoginResponseDto resp = OAuth2LoginResponseDto.builder()
-                .accessToken(tokens.getAccessToken())
-                .refreshToken(tokens.getRefreshToken())
+                .accessToken(tokens.accessToken())
+                .refreshToken(tokens.refreshToken())
                 .build();
 
         return ResponseDto.<OAuth2LoginResponseDto>builder()
@@ -171,7 +171,7 @@ public class AuthServiceImpl implements AuthService {
         CustomUserDetails userDetails = new CustomUserDetails(saved);
         LoginTokens tokens = issueTokens(userDetails, UserType.OAUTH2);
 
-        return new OAuth2LoginResponseDto(tokens.getAccessToken(), tokens.getRefreshToken());
+        return new OAuth2LoginResponseDto(tokens.accessToken(), tokens.refreshToken());
     }
 
     @Override
@@ -206,4 +206,6 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails, userType);
         return new LoginTokens(accessToken, refreshToken);
     }
+
+    private record LoginTokens(String accessToken, String refreshToken) { }
 }

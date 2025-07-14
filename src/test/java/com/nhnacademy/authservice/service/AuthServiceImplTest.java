@@ -16,6 +16,7 @@ import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
 import com.nhnacademy.authservice.provider.UserType;
+import com.nhnacademy.authservice.service.impl.AuthServiceImpl;
 import com.nhnacademy.authservice.userdetails.CustomUserDetails;
 import feign.FeignException;
 import feign.Request;
@@ -56,7 +57,8 @@ class AuthServiceImplTest {
     @Mock UserDetails userDetails;
     @Mock Authentication authentication;
     @Mock PasswordEncoder passwordEncoder;
-    @InjectMocks AuthServiceImpl authService;
+    @InjectMocks
+    AuthServiceImpl authService;
 
     @Test
     void login_success() {
