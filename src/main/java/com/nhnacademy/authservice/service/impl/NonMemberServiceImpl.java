@@ -19,10 +19,17 @@ public class NonMemberServiceImpl implements NonMemberService {
     @Override
     public boolean validate(NonMemberLoginRequest request) {
         Long orderId = orderAdapter.getIdByOrderNumber(request.getOrderNumber());
-        String rawPassword = request.getPassword();
+
+        if (orderId == null) {
+            return false;
+        }
 
         String encryptedPassword = userAdapter.getGuestPassword(orderId);
 
-        return passwordEncoder.matches(rawPassword, encryptedPassword);
+        if (encryptedPassword == null || encryptedPassword.isEmpty()) {
+            return false;
+        }
+
+        return passwordEncoder.matches(request.getPassword(), encryptedPassword);
     }
 }
