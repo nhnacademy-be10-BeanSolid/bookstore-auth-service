@@ -4,6 +4,7 @@ import com.nhnacademy.authservice.dto.nonmember.request.NonMemberLoginRequest;
 import com.nhnacademy.authservice.service.NonMemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +18,7 @@ public class NonMemberController {
     private final NonMemberService nonMemberService;
 
     @PostMapping("/non-member/login")
-    public ResponseEntity<Boolean> nonMemberLogin(@RequestBody NonMemberLoginRequest request) {
+    public ResponseEntity<Boolean> nonMemberLogin(@Valid @RequestBody NonMemberLoginRequest request) {
         boolean isValid = nonMemberService.validate(request);
         return ResponseEntity.ok(isValid);
     }
