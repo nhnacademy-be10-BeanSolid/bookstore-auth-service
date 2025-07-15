@@ -1,9 +1,9 @@
 package com.nhnacademy.authservice.controller;
 
-import com.nhnacademy.authservice.domain.request.OAuth2AdditionalSignupRequestDto;
-import com.nhnacademy.authservice.domain.request.OAuth2LoginRequestDto;
-import com.nhnacademy.authservice.domain.response.OAuth2LoginResponseDto;
-import com.nhnacademy.authservice.domain.response.ResponseDto;
+import com.nhnacademy.authservice.dto.oauth2.request.OAuth2AdditionalSignupRequestDto;
+import com.nhnacademy.authservice.dto.oauth2.request.OAuth2LoginRequestDto;
+import com.nhnacademy.authservice.dto.oauth2.response.OAuth2LoginResponseDto;
+import com.nhnacademy.authservice.dto.oauth2.response.ResponseDto;
 import com.nhnacademy.authservice.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

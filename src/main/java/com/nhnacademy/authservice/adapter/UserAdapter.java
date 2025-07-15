@@ -1,7 +1,7 @@
 package com.nhnacademy.authservice.adapter;
 
-import com.nhnacademy.authservice.domain.request.OAuth2UserCreateRequestDto;
-import com.nhnacademy.authservice.domain.response.UserResponse;
+import com.nhnacademy.authservice.dto.oauth2.request.OAuth2UserCreateRequestDto;
+import com.nhnacademy.authservice.dto.user.response.UserResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,4 +15,7 @@ public interface UserAdapter {
 
     @PutMapping("/users/me/lastloginat")
     UserResponse updateLastLoginAt(@RequestHeader("X-USER-ID") String userId);
+
+    @GetMapping("/guests/{orderId}/password")
+    String getGuestPassword(@PathVariable("orderId") Long orderId);
 }

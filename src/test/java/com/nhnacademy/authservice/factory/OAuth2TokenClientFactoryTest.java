@@ -1,7 +1,7 @@
 package com.nhnacademy.authservice.factory;
 
 import com.nhnacademy.authservice.client.token.OAuth2TokenClient;
-import com.nhnacademy.authservice.domain.response.OAuth2TokenResponse;
+import com.nhnacademy.authservice.dto.oauth2.response.OAuth2TokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

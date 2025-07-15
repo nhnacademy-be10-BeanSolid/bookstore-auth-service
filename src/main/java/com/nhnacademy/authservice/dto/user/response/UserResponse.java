@@ -1,4 +1,4 @@
-package com.nhnacademy.authservice.domain.response;
+package com.nhnacademy.authservice.dto.user.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

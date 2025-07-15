@@ -1,7 +1,11 @@
 package com.nhnacademy.authservice.service;
 
-import com.nhnacademy.authservice.domain.request.OAuth2AdditionalSignupRequestDto;
-import com.nhnacademy.authservice.domain.response.*;
+import com.nhnacademy.authservice.dto.auth.response.LoginResponseDto;
+import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.dto.oauth2.request.OAuth2AdditionalSignupRequestDto;
+import com.nhnacademy.authservice.dto.oauth2.response.OAuth2LoginResponseDto;
+import com.nhnacademy.authservice.dto.oauth2.response.ResponseDto;
 
 public interface AuthService {
     LoginResponseDto login(String id, String password);

@@ -3,15 +3,20 @@ package com.nhnacademy.authservice.service;
 import com.nhnacademy.authservice.adapter.UserAdapter;
 import com.nhnacademy.authservice.client.member.OAuth2MemberClient;
 import com.nhnacademy.authservice.client.token.OAuth2TokenClient;
-import com.nhnacademy.authservice.domain.request.OAuth2AdditionalSignupRequestDto;
-import com.nhnacademy.authservice.domain.request.OAuth2UserCreateRequestDto;
-import com.nhnacademy.authservice.domain.response.*;
+import com.nhnacademy.authservice.dto.auth.response.LoginResponseDto;
+import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
+import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.dto.oauth2.request.OAuth2AdditionalSignupRequestDto;
+import com.nhnacademy.authservice.dto.oauth2.response.*;
+import com.nhnacademy.authservice.dto.oauth2.request.OAuth2UserCreateRequestDto;
+import com.nhnacademy.authservice.dto.user.response.UserResponse;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
 import com.nhnacademy.authservice.provider.UserType;
+import com.nhnacademy.authservice.service.impl.AuthServiceImpl;
 import com.nhnacademy.authservice.userdetails.CustomUserDetails;
 import feign.FeignException;
 import feign.Request;
@@ -52,7 +57,8 @@ class AuthServiceImplTest {
     @Mock UserDetails userDetails;
     @Mock Authentication authentication;
     @Mock PasswordEncoder passwordEncoder;
-    @InjectMocks AuthServiceImpl authService;
+    @InjectMocks
+    AuthServiceImpl authService;
 
     @Test
     void login_success() {
