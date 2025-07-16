@@ -246,7 +246,6 @@ public class AuthServiceImpl implements AuthService {
     public boolean verifyDormantUserCode(DormantUserVerificationRequestDto dto) {
 
         String redisCode = redisTemplate.opsForValue().get(dto.userId());
-        log.debug("DormantUserVerificationRequestDto: {}", dto);
 
         if (redisCode == null) {
             throw new VerificationCodeException("인증코드가 만료되었거나 존재하지 않습니다.");

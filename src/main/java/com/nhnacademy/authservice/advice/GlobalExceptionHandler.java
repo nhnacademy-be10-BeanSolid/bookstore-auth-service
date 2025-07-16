@@ -2,7 +2,7 @@ package com.nhnacademy.authservice.advice;
 
 import com.nhnacademy.authservice.exception.UserDormantException;
 import com.nhnacademy.authservice.exception.UserWithdrawnException;
-import jakarta.validation.ValidationException;
+import com.nhnacademy.authservice.exception.VerificationCodeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -50,8 +50,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ErrorResponseDto> handleValidationException(ValidationException ex) {
+    @ExceptionHandler(VerificationCodeException.class)
+    public ResponseEntity<ErrorResponseDto> handleValidationCodeException(VerificationCodeException ex) {
         ErrorResponseDto error = new ErrorResponseDto(
                 HttpStatus.BAD_REQUEST.value(),
                 ex.getMessage(),
