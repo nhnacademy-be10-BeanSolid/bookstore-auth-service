@@ -4,14 +4,17 @@ import com.nhnacademy.authservice.dto.auth.request.LoginRequestDto;
 import com.nhnacademy.authservice.dto.auth.request.PasswordVerificationRequestDto;
 import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.dto.dormantuser.request.DormantUserVerificationRequestDto;
 import com.nhnacademy.authservice.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
+@Slf4j
 public class AuthController {
     private final AuthService authService;
 
@@ -42,5 +45,12 @@ public class AuthController {
     @PostMapping("/parse")
     public ResponseEntity<TokenParseResponseDto> parseToken(@RequestBody String token) {
         return ResponseEntity.ok(authService.parseToken(token));
+    }
+
+    @PostMapping("/dormant/verify")
+    public ResponseEntity<Boolean> dormantVerify(@RequestBody DormantUserVerificationRequestDto dto){
+
+        log.debug("DormantUserVerificationRequestDto: {}", dto);
+        return ResponseEntity.ok(authService.verifyDormantUserCode(dto));
     }
 }

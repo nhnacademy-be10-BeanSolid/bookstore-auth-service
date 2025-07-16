@@ -18,4 +18,7 @@ public interface UserAdapter {
 
     @GetMapping("/guests/{orderId}/password")
     String getGuestPassword(@PathVariable("orderId") Long orderId);
+
+    @PutMapping("/users/me/status")
+    UserResponse updateStatus(@RequestHeader("X-USER-ID") String userId, @RequestParam String status);
 }
