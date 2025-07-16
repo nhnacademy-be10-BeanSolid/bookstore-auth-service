@@ -75,6 +75,10 @@ class AuthServiceImplTest {
         when(jwtTokenProvider.generateAccessToken(userDetails, UserType.LOCAL)).thenReturn(accessToken);
         when(jwtTokenProvider.generateRefreshToken(userDetails, UserType.LOCAL)).thenReturn(refreshToken);
 
+        UserResponse activeUserResponse = mock(UserResponse.class);
+        when(userAdapter.getUserByUsername(id)).thenReturn(activeUserResponse);
+        when(activeUserResponse.getUserStatus()).thenReturn("ACTIVE");
+
         LoginResponseDto result = authService.login(id, pw);
 
         assertEquals(accessToken, result.accessToken());
