@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponseDto login(String id, String password) {
         UserDetails userDetails = (UserDetails) authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(id, password)).getPrincipal();
 
-        UserResponse userResponse = userAdapter.getUserByUsername(id);
+        UserResponse userResponse = userAdapter.getUserByUsername(userDetails.getUsername());
 
         if(userResponse.getUserStatus().equals("DORMANT")){
 
