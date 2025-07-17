@@ -2,9 +2,11 @@ package com.nhnacademy.authservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nhnacademy.authservice.dto.auth.request.LoginRequestDto;
+import com.nhnacademy.authservice.dto.auth.request.PasswordVerificationRequestDto;
 import com.nhnacademy.authservice.dto.auth.response.LoginResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.dto.dormantuser.request.DormantUserVerificationRequestDto;
 import com.nhnacademy.authservice.provider.UserType;
 import com.nhnacademy.authservice.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -54,6 +57,34 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("accessToken"))
                 .andExpect(jsonPath("$.refreshToken").value("refreshToken"));
+    }
+
+    @Test
+    @DisplayName("비밀번호 검증 성공")
+    void verifyPassword_success() throws Exception {
+        when(authService.verifyPassword(anyString(), anyString())).thenReturn(true);
+
+        PasswordVerificationRequestDto dto = new PasswordVerificationRequestDto("pw");
+        mockMvc.perform(post("/auth/verify-password")
+                        .header("X-USER-ID", "testuser")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(true));
+    }
+
+    @Test
+    @DisplayName("비밀번호 검증 실패 시 false")
+    void verifyPassword_fail() throws Exception {
+        when(authService.verifyPassword(anyString(), anyString())).thenReturn(false);
+
+        PasswordVerificationRequestDto dto = new PasswordVerificationRequestDto("wrongpw");
+        mockMvc.perform(post("/auth/verify-password")
+                        .header("X-USER-ID", "testuser")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(false));
     }
 
     @Test
@@ -104,6 +135,32 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.username").value("testuser"))
                 .andExpect(jsonPath("$.authorities[0]").value("ROLE_USER"))
                 .andExpect(jsonPath("$.authorities[1]").value("ROLE_ADMIN"));
+    }
+
+    @Test
+    @DisplayName("휴면 인증 성공")
+    void dormantVerify_success() throws Exception {
+        when(authService.verifyDormantUserCode(any(DormantUserVerificationRequestDto.class))).thenReturn(true);
+
+        DormantUserVerificationRequestDto dto = new DormantUserVerificationRequestDto("user123", "123456");
+        mockMvc.perform(post("/auth/dormant/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(true));
+    }
+
+    @Test
+    @DisplayName("휴면 인증 실패")
+    void dormantVerify_fail() throws Exception {
+        when(authService.verifyDormantUserCode(any(DormantUserVerificationRequestDto.class))).thenReturn(false);
+
+        DormantUserVerificationRequestDto dto = new DormantUserVerificationRequestDto("user123", "wrongcode");
+        mockMvc.perform(post("/auth/dormant/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(false));
     }
 
 

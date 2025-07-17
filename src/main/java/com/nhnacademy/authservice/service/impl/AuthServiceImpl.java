@@ -1,17 +1,23 @@
 package com.nhnacademy.authservice.service.impl;
 
+import com.nhnacademy.authservice.adapter.DoorayAdapter;
 import com.nhnacademy.authservice.adapter.UserAdapter;
+import com.nhnacademy.authservice.client.dooray.Attachment;
+import com.nhnacademy.authservice.client.dooray.MessagePayload;
 import com.nhnacademy.authservice.client.member.OAuth2MemberClient;
 import com.nhnacademy.authservice.client.token.OAuth2TokenClient;
 import com.nhnacademy.authservice.dto.auth.response.LoginResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.dto.dormantuser.request.DormantUserVerificationRequestDto;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2AdditionalSignupRequestDto;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2UserCreateRequestDto;
 import com.nhnacademy.authservice.dto.oauth2.response.*;
 import com.nhnacademy.authservice.dto.user.response.UserResponse;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
+import com.nhnacademy.authservice.exception.UserDormantException;
 import com.nhnacademy.authservice.exception.UserWithdrawnException;
+import com.nhnacademy.authservice.exception.VerificationCodeException;
 import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
@@ -19,9 +25,12 @@ import com.nhnacademy.authservice.provider.UserType;
 import com.nhnacademy.authservice.service.AuthService;
 import com.nhnacademy.authservice.userdetails.CustomUserDetails;
 import com.nhnacademy.authservice.util.PhoneNumberUtils;
+import com.nhnacademy.authservice.util.SecureVerificationCodeGenerator;
 import feign.FeignException;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -29,6 +38,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -36,6 +46,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final AuthenticationManager authenticationManager;
@@ -45,10 +56,32 @@ public class AuthServiceImpl implements AuthService {
     private final OAuth2MemberClientFactory memberClientFactory;
     private final UserAdapter userAdapter;
     private final PasswordEncoder passwordEncoder;
+    private final DoorayAdapter doorayAdapter;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     public LoginResponseDto login(String id, String password) {
         UserDetails userDetails = (UserDetails) authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(id, password)).getPrincipal();
+
+        UserResponse userResponse = userAdapter.getUserByUsername(userDetails.getUsername());
+
+        if(userResponse.getUserStatus().equals("DORMANT")){
+
+            String verificationCode = SecureVerificationCodeGenerator.generate6DigitCode();
+            String messageText = "인증번호: " + verificationCode;
+
+            log.debug("userId: {}", userResponse.getUserId());
+            redisTemplate.opsForValue().set(userResponse.getUserId(), verificationCode, Duration.ofMinutes(5));
+
+            Attachment attachment = new Attachment("인증 요청", messageText);
+            MessagePayload messagePayload = new MessagePayload("BeanSolid", id + "님\n5분내로 아래 인증번호를 입력해주세요.", List.of(attachment));
+
+            doorayAdapter.sendMessage(messagePayload);
+
+            throw new UserDormantException("휴면 상태입니다. 두레이 메세지의 인증번호를 입력해주세요.");
+        }
+
+
         LoginTokens tokens = issueTokens(userDetails, UserType.LOCAL);
         userAdapter.updateLastLoginAt(userDetails.getUsername());
         return new LoginResponseDto(tokens.accessToken(), tokens.refreshToken());
@@ -208,4 +241,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private record LoginTokens(String accessToken, String refreshToken) { }
+
+    @Override
+    public boolean verifyDormantUserCode(DormantUserVerificationRequestDto dto) {
+
+        String redisCode = redisTemplate.opsForValue().get(dto.userId());
+
+        if (redisCode == null) {
+            throw new VerificationCodeException("인증코드가 만료되었거나 존재하지 않습니다.");
+        }
+
+        redisTemplate.delete(dto.userId());
+
+        if (!redisCode.equals(dto.verificationCode())) {
+            return false;
+        }
+
+        userAdapter.updateStatus(dto.userId(), "ACTIVE");
+
+        return true;
+    }
+
 }

@@ -1,17 +1,22 @@
 package com.nhnacademy.authservice.service;
 
+import com.nhnacademy.authservice.adapter.DoorayAdapter;
 import com.nhnacademy.authservice.adapter.UserAdapter;
+import com.nhnacademy.authservice.client.dooray.MessagePayload;
 import com.nhnacademy.authservice.client.member.OAuth2MemberClient;
 import com.nhnacademy.authservice.client.token.OAuth2TokenClient;
 import com.nhnacademy.authservice.dto.auth.response.LoginResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
+import com.nhnacademy.authservice.dto.dormantuser.request.DormantUserVerificationRequestDto;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2AdditionalSignupRequestDto;
 import com.nhnacademy.authservice.dto.oauth2.response.*;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2UserCreateRequestDto;
 import com.nhnacademy.authservice.dto.user.response.UserResponse;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
+import com.nhnacademy.authservice.exception.UserDormantException;
 import com.nhnacademy.authservice.exception.UserWithdrawnException;
+import com.nhnacademy.authservice.exception.VerificationCodeException;
 import com.nhnacademy.authservice.factory.OAuth2MemberClientFactory;
 import com.nhnacademy.authservice.factory.OAuth2TokenClientFactory;
 import com.nhnacademy.authservice.provider.JwtTokenProvider;
@@ -29,6 +34,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -36,6 +43,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -54,11 +62,14 @@ class AuthServiceImplTest {
     @Mock private OAuth2TokenClient tokenClient;
     @Mock private OAuth2MemberClient memberClient;
     @Mock UserAdapter userAdapter;
+    @Mock DoorayAdapter doorayAdapter;
     @Mock UserDetails userDetails;
     @Mock Authentication authentication;
     @Mock PasswordEncoder passwordEncoder;
     @InjectMocks
     AuthServiceImpl authService;
+    @Mock RedisTemplate<String, String> redisTemplate;
+    @Mock ValueOperations<String, String> valueOperations;
 
     @Test
     void login_success() {
@@ -74,6 +85,10 @@ class AuthServiceImplTest {
         when(userDetails.getUsername()).thenReturn(id);
         when(jwtTokenProvider.generateAccessToken(userDetails, UserType.LOCAL)).thenReturn(accessToken);
         when(jwtTokenProvider.generateRefreshToken(userDetails, UserType.LOCAL)).thenReturn(refreshToken);
+
+        UserResponse activeUserResponse = mock(UserResponse.class);
+        when(userAdapter.getUserByUsername(id)).thenReturn(activeUserResponse);
+        when(activeUserResponse.getUserStatus()).thenReturn("ACTIVE");
 
         LoginResponseDto result = authService.login(id, pw);
 
@@ -345,6 +360,84 @@ class AuthServiceImplTest {
         assertThrows(FeignException.class, () ->
                 authService.verifyPassword(userId, pw));
     }
+
+    @Test
+    void login_dormantUser_sendsCodeToRedisAndDoorayAndThrows() {
+        String id = "dormantUser";
+        String pw = "pw";
+
+        UserResponse dormantUser = mock(UserResponse.class);
+        when(authenticationManager.authenticate(any())).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userDetails.getUsername()).thenReturn(id);
+        when(userAdapter.getUserByUsername(id)).thenReturn(dormantUser);
+        when(dormantUser.getUserStatus()).thenReturn("DORMANT");
+        when(dormantUser.getUserId()).thenReturn(id);
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        assertThrows(UserDormantException.class, () -> authService.login(id, pw));
+
+        verify(valueOperations, times(1)).set(eq(id), anyString(), any(Duration.class));
+
+        ArgumentCaptor<MessagePayload> captor = ArgumentCaptor.forClass(MessagePayload.class);
+        verify(doorayAdapter, times(1)).sendMessage(captor.capture());
+
+        MessagePayload payload = captor.getValue();
+        assertEquals("BeanSolid", payload.getBotName());
+        assertTrue(payload.getText().startsWith(id + "님"));
+        assertEquals(1, payload.getAttachments().size());
+        assertEquals("인증 요청", payload.getAttachments().getFirst().getTitle());
+    }
+
+
+
+    @Test
+    void verifyDormantUserCode_codeNotInRedis_throwsException() {
+        DormantUserVerificationRequestDto dto = mock(DormantUserVerificationRequestDto.class);
+        when(dto.userId()).thenReturn("user123");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("user123")).thenReturn(null);
+
+        assertThrows(VerificationCodeException.class, () -> authService.verifyDormantUserCode(dto));
+    }
+
+    @Test
+    void verifyDormantUserCode_codeNotMatch_returnsFalse() {
+        DormantUserVerificationRequestDto dto = mock(DormantUserVerificationRequestDto.class);
+        when(dto.userId()).thenReturn("user123");
+        when(dto.verificationCode()).thenReturn("wrong");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("user123")).thenReturn("correct");
+        assertFalse(authService.verifyDormantUserCode(dto));
+    }
+
+    @Test
+    void verifyDormantUserCode_success_setsActiveAndReturnsTrue() {
+        DormantUserVerificationRequestDto dto = mock(DormantUserVerificationRequestDto.class);
+        when(dto.userId()).thenReturn("user123");
+        when(dto.verificationCode()).thenReturn("123456");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("user123")).thenReturn("123456");
+
+        boolean result = authService.verifyDormantUserCode(dto);
+
+        assertTrue(result);
+        verify(userAdapter).updateStatus("user123", "ACTIVE");
+        verify(redisTemplate).delete("user123");
+    }
+
+    @Test
+    void verifyPassword_unexpectedException_returnsFalse() {
+        String userId = "user123";
+        String pw = "pw";
+        when(userAdapter.getUserByUsername(userId)).thenThrow(new RuntimeException("Unexpected"));
+
+        boolean result = authService.verifyPassword(userId, pw);
+
+        assertFalse(result);
+    }
+
 
 
 }

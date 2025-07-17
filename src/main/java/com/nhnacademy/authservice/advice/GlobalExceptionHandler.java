@@ -1,6 +1,8 @@
 package com.nhnacademy.authservice.advice;
 
+import com.nhnacademy.authservice.exception.UserDormantException;
 import com.nhnacademy.authservice.exception.UserWithdrawnException;
+import com.nhnacademy.authservice.exception.VerificationCodeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -36,6 +38,26 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now()
         );
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(UserDormantException.class)
+    public ResponseEntity<ErrorResponseDto> handleDormentException(UserDormantException ex) {
+        ErrorResponseDto error = new ErrorResponseDto(
+                HttpStatus.FORBIDDEN.value(),
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(VerificationCodeException.class)
+    public ResponseEntity<ErrorResponseDto> handleValidationCodeException(VerificationCodeException ex) {
+        ErrorResponseDto error = new ErrorResponseDto(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
     // FeignClient 등 외부 API 호출 오류
