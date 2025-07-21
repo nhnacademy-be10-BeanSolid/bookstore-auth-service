@@ -6,9 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,6 +54,36 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
+                .andExpect(jsonPath("$.time").exists());
+    }
+
+    @Test
+    void handleUserDormant() throws Exception {
+        mockMvc.perform(get("/test/user-dormant"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("휴면 사용자입니다."))
+                .andExpect(jsonPath("$.time").exists());
+    }
+
+    @Test
+    void handleVerificationCodeException() throws Exception {
+        mockMvc.perform(get("/test/verification-code"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("인증 코드가 유효하지 않습니다."))
+                .andExpect(jsonPath("$.time").exists());
+    }
+
+    @Test
+    void handleValidationExceptions() throws Exception {
+        mockMvc.perform(post("/test/validation-error")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}".getBytes())) // Empty content to trigger validation error
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("입력 값 유효성 검사에 실패했습니다."))
+                .andExpect(jsonPath("$.errors.value").value("값은 비어 있을 수 없습니다."))
                 .andExpect(jsonPath("$.time").exists());
     }
 }
