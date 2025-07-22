@@ -1,5 +1,6 @@
 package com.nhnacademy.authservice.controller;
 
+import com.nhnacademy.authservice.controller.api.NonMemberApi;
 import com.nhnacademy.authservice.dto.nonmember.request.NonMemberLoginRequest;
 import com.nhnacademy.authservice.service.NonMemberService;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-public class NonMemberController {
+public class NonMemberController implements NonMemberApi {
 
     private final NonMemberService nonMemberService;
 
+    @Override
     @PostMapping("/non-member/login")
     public ResponseEntity<Boolean> nonMemberLogin(@Valid @RequestBody NonMemberLoginRequest request) {
         boolean isValid = nonMemberService.validate(request);
