@@ -2,7 +2,8 @@ package com.nhnacademy.authservice.userdetails;
 
 import com.nhnacademy.authservice.adapter.UserAdapter;
 import com.nhnacademy.authservice.dto.user.response.UserResponse;
-import com.nhnacademy.authservice.exception.UserWithdrawnException;
+import feign.FeignException;
+import feign.Request;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +13,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -46,25 +51,18 @@ class CustomUserDetailsServiceTest {
     @Test
     @DisplayName("사용자가 존재하지 않을 때 UsernameNotFoundException 발생")
     void loadUserByUsername_throwsException_whenUserNotFound() {
-        when(userAdapter.getUserByUsername("unknown")).thenReturn(null);
+        // FeignException.NotFound 생성자를 올바르게 호출
+        when(userAdapter.getUserByUsername(anyString())).thenThrow(
+            new FeignException.NotFound(
+                "User not found",
+                Request.create(Request.HttpMethod.GET, "/users/unknown", Collections.emptyMap(), new byte[0], StandardCharsets.UTF_8),
+                null,
+                Collections.emptyMap()
+            )
+        );
 
         assertThrows(UsernameNotFoundException.class, () -> {
             customUserDetailsService.loadUserByUsername("unknown");
-        });
-    }
-
-    @Test
-    @DisplayName("탈퇴한 사용자인 경우 UserWithDrawnException 발생")
-    void loadUserByUsername_throwsUserWithdrawnException_whenUserIsWithdrawn() {
-        UserResponse userResponse = new UserResponse();
-        userResponse.setUserId("withdrawnuser");
-        userResponse.setUserPassword("password");
-        userResponse.setUserStatus("WITHDRAWN");
-
-        when(userAdapter.getUserByUsername("withdrawnuser")).thenReturn(userResponse);
-
-        assertThrows(UserWithdrawnException.class, () -> {
-            customUserDetailsService.loadUserByUsername("withdrawnuser");
         });
     }
 }

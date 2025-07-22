@@ -1,5 +1,7 @@
 package com.nhnacademy.authservice.controller;
 
+import com.nhnacademy.authservice.exception.InvalidOAuth2ProviderException;
+import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.exception.UserDormantException;
 import com.nhnacademy.authservice.exception.UserWithdrawnException;
 import com.nhnacademy.authservice.exception.VerificationCodeException;
@@ -9,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +25,7 @@ import org.springframework.web.client.HttpClientErrorException;
 public class TestExceptionController {
     @GetMapping("/username-not-found")
     public void usernameNotFound() {
-        throw new UsernameNotFoundException("사용자를 찾을 수 없습니다.");
+        throw new BadCredentialsException("사용자를 찾을 수 없습니다.");
     }
 
     @GetMapping("/feign-error")
@@ -44,6 +47,12 @@ public class TestExceptionController {
 
     @GetMapping("/verification-code")
     public void verificationCode() { throw new VerificationCodeException("인증 코드가 유효하지 않습니다."); }
+
+    @GetMapping("/invalid-token")
+    public void invalidToken() { throw new InvalidTokenException("Invalid Token"); }
+
+    @GetMapping("/invalid-oauth2-provider")
+    public void invalidOAuth2Provider() { throw new InvalidOAuth2ProviderException("unknown"); }
 
     @PostMapping("/validation-error")
     public void validationError(@Valid @RequestBody TestDto testDto) {
