@@ -28,6 +28,7 @@ import com.nhnacademy.authservice.util.PhoneNumberUtils;
 import com.nhnacademy.authservice.util.SecureVerificationCodeGenerator;
 import feign.FeignException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -65,6 +66,10 @@ public class AuthServiceImpl implements AuthService {
 
         UserResponse userResponse = userAdapter.getUserByUsername(userDetails.getUsername());
 
+        // 탈퇴 회원 판단 로직 추가
+        if(userResponse.getUserStatus().equals("WITHDRAWN")) {
+            throw new UserWithdrawnException(userResponse.getUserId() + "은(는) 탈퇴한 사용자입니다.");
+        }
         if(userResponse.getUserStatus().equals("DORMANT")){
 
             String verificationCode = SecureVerificationCodeGenerator.generate6DigitCode();
@@ -184,7 +189,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public OAuth2LoginResponseDto completeOAuth2Signup(String tempJwt, OAuth2AdditionalSignupRequestDto additionalInfo) {
         // 1. 임시 토큰 파싱 및 검증
-        Claims claims = jwtTokenProvider.parseTemporaryToken(tempJwt);
+        Claims claims;
+        try {
+            claims = jwtTokenProvider.parseTemporaryToken(tempJwt);
+        } catch (JwtException e) {
+            throw new InvalidTokenException("유효하지 않거나 만료된 임시 토큰입니다.");
+        }
         String provider = claims.get("provider", String.class);
         String idNo = claims.get("idNo", String.class);
 
