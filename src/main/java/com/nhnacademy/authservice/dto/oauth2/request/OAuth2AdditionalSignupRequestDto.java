@@ -22,7 +22,7 @@ public class OAuth2AdditionalSignupRequestDto {
     @Schema(description = "사용자 이메일", example = "hong.gildong@example.com")
     private String email;
     @NotBlank(message = "휴대폰 번호는 필수입니다.")
-    @Pattern(regexp = "^01[016-9]-(?:\d{3}|\d{4})-\d{4}$", message = "유효한 휴대폰 번호 형식이 아닙니다.")
+    @Pattern(regexp = "^01[016-9]-(?:\\d{3}|\\d{4})-\\d{4}$", message = "유효한 휴대폰 번호 형식이 아닙니다.")
     @Size(max = 15, message = "연락처는 15자 이하여야 합니다.")
     @Schema(description = "사용자 휴대폰 번호", example = "010-1234-5678")
     private String mobile;
