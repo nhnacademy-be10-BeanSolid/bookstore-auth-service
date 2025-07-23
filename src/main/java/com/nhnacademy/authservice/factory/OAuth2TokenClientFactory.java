@@ -1,6 +1,7 @@
 package com.nhnacademy.authservice.factory;
 
 import com.nhnacademy.authservice.client.token.OAuth2TokenClient;
+import com.nhnacademy.authservice.exception.InvalidOAuth2ProviderException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,10 @@ public class OAuth2TokenClientFactory {
     }
 
     public OAuth2TokenClient getClient(String provider) {
-        return clientMap.get(provider);
+        OAuth2TokenClient client = clientMap.get(provider);
+        if (client == null) {
+            throw new InvalidOAuth2ProviderException(provider);
+        }
+        return client;
     }
 }

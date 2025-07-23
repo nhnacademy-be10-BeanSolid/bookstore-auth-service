@@ -10,8 +10,8 @@ import com.nhnacademy.authservice.dto.auth.response.RefreshTokenResponseDto;
 import com.nhnacademy.authservice.dto.auth.response.TokenParseResponseDto;
 import com.nhnacademy.authservice.dto.dormantuser.request.DormantUserVerificationRequestDto;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2AdditionalSignupRequestDto;
-import com.nhnacademy.authservice.dto.oauth2.response.*;
 import com.nhnacademy.authservice.dto.oauth2.request.OAuth2UserCreateRequestDto;
+import com.nhnacademy.authservice.dto.oauth2.response.*;
 import com.nhnacademy.authservice.dto.user.response.UserResponse;
 import com.nhnacademy.authservice.exception.InvalidTokenException;
 import com.nhnacademy.authservice.exception.UserDormantException;
@@ -27,6 +27,8 @@ import feign.FeignException;
 import feign.Request;
 import feign.Response;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -43,16 +45,17 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Auth 서비스 테스트")
 class AuthServiceImplTest {
     @Mock private AuthenticationManager authenticationManager;
     @Mock private UserDetailsService userDetailsService;
@@ -72,6 +75,7 @@ class AuthServiceImplTest {
     @Mock ValueOperations<String, String> valueOperations;
 
     @Test
+    @DisplayName("로그인 성공")
     void login_success() {
         // given
         String id = "user";
@@ -98,6 +102,24 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("탈퇴한 사용자로 로그인 시 예외 발생")
+    void login_withdrawnUser_throwsUserWithdrawnException() {
+        String id = "withdrawnUser";
+        String pw = "pw";
+
+        UserResponse withdrawnUserResponse = mock(UserResponse.class);
+        when(authenticationManager.authenticate(any())).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userDetails.getUsername()).thenReturn(id);
+        when(userAdapter.getUserByUsername(id)).thenReturn(withdrawnUserResponse);
+        when(withdrawnUserResponse.getUserStatus()).thenReturn("WITHDRAWN");
+        when(withdrawnUserResponse.getUserId()).thenReturn(id);
+
+        assertThrows(UserWithdrawnException.class, () -> authService.login(id, pw));
+    }
+
+    @Test
+    @DisplayName("리프레시 토큰으로 재발급 성공")
     void refreshToken_success() {
         String refreshToken = "refresh-token";
         String username = "user";
@@ -119,6 +141,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("유효하지 않은 리프레시 토큰으로 재발급 시 예외 발생")
     void refreshToken_invalidToken_throwsException() {
         String refreshToken = "invalid";
         when(jwtTokenProvider.validateToken(refreshToken)).thenReturn(false);
@@ -128,6 +151,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("토큰 유효성 검사 성공")
     void validateToken_success() {
         String token = "token";
         when(jwtTokenProvider.validateToken(token)).thenReturn(true);
@@ -136,6 +160,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("토큰 파싱 성공")
     void parseToken_success() {
         String token = "valid-token";
         String username = "testuser";
@@ -152,6 +177,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("유효하지 않은 토큰 파싱 시 예외 발생")
     void parseToken_invalidToken_throwsException() {
         String token = "invalid-token";
         when(jwtTokenProvider.validateToken(token)).thenReturn(false);
@@ -160,6 +186,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("OAuth2 신규 사용자 로그인 시 추가 정보 입력 필요")
     void oauth2Login_newUser_returnsAdditionalSignupRequired() {
         String provider = "payco";
         String code = "auth_code";
@@ -204,6 +231,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("OAuth2 기존 사용자 로그인 성공")
     void oauth2Login_existingUser_returnsTokens() {
         String provider = "payco";
         String code = "auth_code";
@@ -246,6 +274,43 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("OAuth2 탈퇴한 사용자 로그인 시 예외 발생")
+    void oauth2Login_withdrawnUser_throwsUserWithdrawnException() {
+        String provider = "payco";
+        String code = "auth_code";
+        String accessToken = "oauth_access_token";
+        String idNo = "user123";
+        String mobile = "821012345678";
+
+        OAuth2TokenResponse tokenResponse = OAuth2TokenResponse.builder().access_token(accessToken).build();
+
+        OAuth2MemberResponse memberResponse = new OAuth2MemberResponse();
+        OAuth2MemberResponse.Data data = new OAuth2MemberResponse.Data();
+        OAuth2MemberResponse.Member member = new OAuth2MemberResponse.Member();
+        member.setIdNo(idNo);
+        member.setName("Name");
+        member.setEmail("email@test.com");
+        member.setMobile(mobile);
+        data.setMember(member);
+        memberResponse.setData(data);
+
+        UserResponse withdrawnUser = new UserResponse();
+        withdrawnUser.setUserId(provider.toUpperCase() + idNo);
+        withdrawnUser.setUserStatus("WITHDRAWN");
+
+        when(tokenClientFactory.getClient(provider)).thenReturn(tokenClient);
+        when(tokenClient.getToken(code)).thenReturn(tokenResponse);
+        when(memberClientFactory.getClient(provider)).thenReturn(memberClient);
+        when(memberClient.getMember(accessToken)).thenReturn(memberResponse);
+        when(userAdapter.getUserByUsername(anyString())).thenReturn(withdrawnUser);
+
+        assertThrows(UserWithdrawnException.class, () -> {
+            authService.oauth2Login(provider, code);
+        });
+    }
+
+    @Test
+    @DisplayName("OAuth2 추가 회원가입 완료 성공")
     void completeOAuth2Signup_success_returnsTokens() {
         String tempJwt = "temp_jwt";
         OAuth2AdditionalSignupRequestDto additionalInfo = OAuth2AdditionalSignupRequestDto.builder()
@@ -286,41 +351,18 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void oauth2Login_withdrawnUser_throwsUserWithdrawnException() {
-        String provider = "payco";
-        String code = "auth_code";
-        String accessToken = "oauth_access_token";
-        String idNo = "user123";
-        String mobile = "821012345678";
+    @DisplayName("유효하지 않은 임시 JWT로 추가 회원가입 시 예외 발생")
+    void completeOAuth2Signup_invalidTempJwt_throwsInvalidTokenException() {
+        String tempJwt = "invalid_temp_jwt";
+        OAuth2AdditionalSignupRequestDto additionalInfo = OAuth2AdditionalSignupRequestDto.builder().build(); // 최소한의 DTO
 
-        OAuth2TokenResponse tokenResponse = OAuth2TokenResponse.builder().access_token(accessToken).build();
+        when(jwtTokenProvider.parseTemporaryToken(tempJwt)).thenThrow(new JwtException("Expired JWT"));
 
-        OAuth2MemberResponse memberResponse = new OAuth2MemberResponse();
-        OAuth2MemberResponse.Data data = new OAuth2MemberResponse.Data();
-        OAuth2MemberResponse.Member member = new OAuth2MemberResponse.Member();
-        member.setIdNo(idNo);
-        member.setName("Name");
-        member.setEmail("email@test.com");
-        member.setMobile(mobile);
-        data.setMember(member);
-        memberResponse.setData(data);
-
-        UserResponse withdrawnUser = new UserResponse();
-        withdrawnUser.setUserId(provider.toUpperCase() + idNo);
-        withdrawnUser.setUserStatus("WITHDRAWN");
-
-        when(tokenClientFactory.getClient(provider)).thenReturn(tokenClient);
-        when(tokenClient.getToken(code)).thenReturn(tokenResponse);
-        when(memberClientFactory.getClient(provider)).thenReturn(memberClient);
-        when(memberClient.getMember(accessToken)).thenReturn(memberResponse);
-        when(userAdapter.getUserByUsername(anyString())).thenReturn(withdrawnUser);
-
-        assertThrows(UserWithdrawnException.class, () -> {
-            authService.oauth2Login(provider, code);
-        });
+        assertThrows(InvalidTokenException.class, () -> authService.completeOAuth2Signup(tempJwt, additionalInfo));
     }
 
     @Test
+    @DisplayName("비밀번호 검증 성공")
     void verifyPassword_validUser_returnsTrue() {
         String userId = "user123";
         String rawPw = "pw";
@@ -336,6 +378,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("사용자 응답이 null일 때 비밀번호 검증 실패")
     void verifyPassword_userResponseNull_returnsFalse() {
         String userId = "user123";
         String pw = "pw";
@@ -348,11 +391,13 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("Feign 오류(404 제외) 발생 시 비밀번호 검증 실패")
     void verifyPassword_feignErrorNon404_throwsFeignException() {
         String userId = "user123";
         String pw = "pw";
         FeignException fe = FeignException.errorStatus("error", Response.builder()
-                .status(500).request(Request.create(Request.HttpMethod.GET, "/", Map.of(), null, null, null))
+                .status(500)
+                .request(Request.create(Request.HttpMethod.GET, "/", Collections.emptyMap(), new byte[0], StandardCharsets.UTF_8))
                 .build());
 
         when(userAdapter.getUserByUsername(userId)).thenThrow(fe);
@@ -362,6 +407,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("휴면 사용자로 로그인 시 인증 코드 전송 및 예외 발생")
     void login_dormantUser_sendsCodeToRedisAndDoorayAndThrows() {
         String id = "dormantUser";
         String pw = "pw";
@@ -393,6 +439,7 @@ class AuthServiceImplTest {
 
 
     @Test
+    @DisplayName("휴면 사용자 인증 코드 검증 시 Redis에 코드가 없는 경우 예외 발생")
     void verifyDormantUserCode_codeNotInRedis_throwsException() {
         DormantUserVerificationRequestDto dto = mock(DormantUserVerificationRequestDto.class);
         when(dto.userId()).thenReturn("user123");
@@ -403,6 +450,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("휴면 사용자 인증 코드 불일치")
     void verifyDormantUserCode_codeNotMatch_returnsFalse() {
         DormantUserVerificationRequestDto dto = mock(DormantUserVerificationRequestDto.class);
         when(dto.userId()).thenReturn("user123");
@@ -413,6 +461,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("휴면 사용자 인증 코드 검증 성공")
     void verifyDormantUserCode_success_setsActiveAndReturnsTrue() {
         DormantUserVerificationRequestDto dto = mock(DormantUserVerificationRequestDto.class);
         when(dto.userId()).thenReturn("user123");
@@ -428,6 +477,7 @@ class AuthServiceImplTest {
     }
 
     @Test
+    @DisplayName("예상치 못한 예외 발생 시 비밀번호 검증 실패")
     void verifyPassword_unexpectedException_returnsFalse() {
         String userId = "user123";
         String pw = "pw";

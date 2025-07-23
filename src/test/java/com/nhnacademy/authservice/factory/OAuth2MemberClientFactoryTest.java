@@ -1,6 +1,7 @@
 package com.nhnacademy.authservice.factory;
 
 import com.nhnacademy.authservice.client.member.OAuth2MemberClient;
+import com.nhnacademy.authservice.exception.InvalidOAuth2ProviderException;
 import com.nhnacademy.authservice.dto.oauth2.response.OAuth2MemberResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,9 +52,8 @@ class OAuth2MemberClientFactoryTest {
     }
 
     @Test
-    @DisplayName("등록되지 않은 provider 요청 시 null 반환")
-    void testGetClientWithUnknownProviderReturnsNull() {
-        OAuth2MemberClient unknown = factory.getClient("google");
-        assertNull(unknown);
+    @DisplayName("등록되지 않은 provider 요청 시 InvalidOAuth2ProviderException 발생")
+    void testGetClientThrowsExceptionForUnknownProvider() {
+        assertThrows(InvalidOAuth2ProviderException.class, () -> factory.getClient("google"));
     }
 }

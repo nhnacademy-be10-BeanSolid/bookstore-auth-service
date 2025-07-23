@@ -22,7 +22,7 @@ class GlobalExceptionHandlerTest {
     private MockMvc mockMvc;
 
     @Test
-    void handleUsernameNotFound() throws Exception {
+    void handleBadCredentials() throws Exception {
         mockMvc.perform(get("/test/username-not-found"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
@@ -31,11 +31,43 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUserWithdrawn() throws Exception {
-        mockMvc.perform(get("/test/user-withdrawn")) // 이 경로는 UserWithdrawnException을 발생시키는 테스트 컨트롤러 엔드포인트입니다.
+    void handleForbiddenExceptions() throws Exception {
+        // UserWithdrawnException 테스트
+        mockMvc.perform(get("/test/user-withdrawn"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.message").value("탈퇴한 사용자입니다."))
+                .andExpect(jsonPath("$.time").exists());
+
+        // UserDormantException 테스트
+        mockMvc.perform(get("/test/user-dormant"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("휴면 사용자입니다."))
+                .andExpect(jsonPath("$.time").exists());
+    }
+
+    @Test
+    void handleBadRequestExceptions() throws Exception {
+        // VerificationCodeException 테스트
+        mockMvc.perform(get("/test/verification-code"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("인증 코드가 유효하지 않습니다."))
+                .andExpect(jsonPath("$.time").exists());
+
+        // InvalidTokenException 테스트
+        mockMvc.perform(get("/test/invalid-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Invalid Token"))
+                .andExpect(jsonPath("$.time").exists());
+
+        // InvalidOAuth2ProviderException 테스트
+        mockMvc.perform(get("/test/invalid-oauth2-provider"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("지원하지 않는 OAuth2 제공자입니다: unknown"))
                 .andExpect(jsonPath("$.time").exists());
     }
 
@@ -49,33 +81,6 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAll() throws Exception {
-        mockMvc.perform(get("/test/any-exception"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
-                .andExpect(jsonPath("$.time").exists());
-    }
-
-    @Test
-    void handleUserDormant() throws Exception {
-        mockMvc.perform(get("/test/user-dormant"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("휴면 사용자입니다."))
-                .andExpect(jsonPath("$.time").exists());
-    }
-
-    @Test
-    void handleVerificationCodeException() throws Exception {
-        mockMvc.perform(get("/test/verification-code"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value("인증 코드가 유효하지 않습니다."))
-                .andExpect(jsonPath("$.time").exists());
-    }
-
-    @Test
     void handleValidationExceptions() throws Exception {
         mockMvc.perform(post("/test/validation-error")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -84,6 +89,15 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("입력 값 유효성 검사에 실패했습니다."))
                 .andExpect(jsonPath("$.errors.value").value("값은 비어 있을 수 없습니다."))
+                .andExpect(jsonPath("$.time").exists());
+    }
+
+    @Test
+    void handleAll() throws Exception {
+        mockMvc.perform(get("/test/any-exception"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
                 .andExpect(jsonPath("$.time").exists());
     }
 }
